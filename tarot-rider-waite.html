@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Arcana · Lectura de Tarot Rider-Waite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=EB+Garamond:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#f2ecdf;
+    --void:#120a24;
+    --void-2:#1b0f34;
+    --plum:#2c1650;
+    --gold:#c9a84c;
+    --gold-bright:#e8cf85;
+    --lavender:#a89bd4;
+    --card-shadow: rgba(0,0,0,.55);
+    --line: rgba(201,168,76,.25);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(90,50,150,.35), transparent 60%),
+      radial-gradient(ellipse at 90% 10%, rgba(60,20,90,.4), transparent 55%),
+      linear-gradient(180deg, var(--void) 0%, var(--void-2) 45%, #0c0718 100%);
+    color:var(--ink);
+    font-family:'Cormorant Garamond', serif;
+    font-size:18px;
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+  /* starfield */
+  .stars{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.55;}
+  .stars span{position:absolute; width:2px; height:2px; background:var(--gold-bright); border-radius:50%; animation:twinkle 4s ease-in-out infinite;}
+  @keyframes twinkle{0%,100%{opacity:.15;} 50%{opacity:.9;}}
+  @media (prefers-reduced-motion: reduce){
+    .stars span{animation:none; opacity:.4;}
+  }
+
+  .wrap{position:relative; z-index:1; max-width:560px; margin:0 auto; padding:36px 20px 80px;}
+
+  header.hero{text-align:center; margin-bottom:34px;}
+  .eyebrow{
+    font-family:'Cinzel', serif; letter-spacing:.35em; text-transform:uppercase;
+    font-size:11px; color:var(--gold); opacity:.85; margin-bottom:10px;
+  }
+  h1{
+    font-family:'Cinzel Decorative', serif; font-weight:700;
+    font-size:clamp(30px,8vw,42px); line-height:1.05; margin:0 0 12px;
+    background:linear-gradient(180deg, var(--gold-bright), var(--gold) 60%, #8a6e2a);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow:0 2px 18px rgba(201,168,76,.25);
+  }
+  .hero p{color:var(--lavender); font-size:16px; margin:0 auto; max-width:400px; font-style:italic;}
+
+  .sigil{width:74px; height:74px; margin:0 auto 18px; opacity:.9;}
+
+  section.panel{
+    background:linear-gradient(160deg, rgba(44,22,80,.55), rgba(18,10,36,.65));
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:22px 20px;
+    margin-bottom:22px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 10px 30px var(--card-shadow), inset 0 1px 0 rgba(255,255,255,.03);
+  }
+  section.panel h2{
+    font-family:'Cinzel', serif; font-weight:600; font-size:14px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--gold-bright); margin:0 0 16px;
+    display:flex; align-items:center; gap:10px;
+  }
+  section.panel h2::before{content:''; width:18px; height:1px; background:var(--gold); opacity:.6;}
+
+  label{display:block; font-family:'Cinzel', serif; font-size:12px; letter-spacing:.08em; color:var(--lavender); margin:14px 0 6px; text-transform:uppercase;}
+  label:first-of-type{margin-top:0;}
+
+  select, input[type=number]{
+    width:100%; padding:12px 14px; border-radius:10px;
+    background:rgba(10,5,22,.6); border:1px solid rgba(201,168,76,.35);
+    color:var(--ink); font-family:'Cormorant Garamond', serif; font-size:17px;
+    appearance:none; -webkit-appearance:none;
+  }
+  select:focus, input:focus{outline:2px solid var(--gold-bright); outline-offset:1px;}
+  select{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23c9a84c'><path d='M5 7l5 6 5-6z'/></svg>");
+    background-repeat:no-repeat; background-position:right 14px center; background-size:14px;
+  }
+
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+
+  .card-slot{
+    border:1px dashed rgba(201,168,76,.3); border-radius:14px; padding:14px; margin-bottom:14px;
+    position:relative;
+  }
+  .card-slot .tag{
+    position:absolute; top:-11px; left:14px; background:var(--void-2); padding:0 8px;
+    font-family:'Cinzel', serif; font-size:11px; letter-spacing:.15em; color:var(--gold);
+    text-transform:uppercase;
+  }
+  .card-info{display:none;}
+
+  .tarot-visual{
+    width:130px; height:195px; margin:0 auto 16px;
+  }
+  .tarot-visual-inner{
+    width:100%; height:100%; border-radius:14px;
+    border:2px solid var(--gold);
+    background:
+      repeating-linear-gradient(135deg, rgba(201,168,76,.05) 0 8px, transparent 8px 16px),
+      linear-gradient(160deg, rgba(70,36,120,.95), rgba(18,10,36,.98));
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    padding:14px 10px;
+    box-shadow:0 12px 26px rgba(0,0,0,.5), inset 0 0 0 1px rgba(201,168,76,.15);
+    transition:transform .6s cubic-bezier(.34,1.2,.4,1);
+    transform:rotate(0deg);
+  }
+  .tarot-visual-inner.reversed{ transform:rotate(180deg); }
+  .tarot-visual-inner .tarot-emoji{ font-size:46px; line-height:1; filter:drop-shadow(0 2px 6px rgba(0,0,0,.4)); }
+  .tarot-visual-inner .tarot-name{
+    font-family:'Cinzel', serif; font-size:11.5px; color:var(--gold-bright);
+    text-align:center; letter-spacing:.03em; line-height:1.3; padding:0 4px;
+  }
+  .tarot-visual-inner.empty .tarot-name{ color:var(--lavender); font-style:italic; }
+
+  .autocomplete-wrap{ position:relative; }
+  .card-input{
+    width:100%; padding:12px 14px; border-radius:10px;
+    background:rgba(10,5,22,.6); border:1px solid rgba(201,168,76,.35);
+    color:var(--ink); font-family:'Cormorant Garamond', serif; font-size:17px;
+  }
+  .card-input:focus{ outline:2px solid var(--gold-bright); outline-offset:1px; }
+  .suggestions{
+    position:absolute; z-index:30; top:calc(100% + 6px); left:0; right:0;
+    max-height:230px; overflow-y:auto;
+    background:#170b2e; border:1px solid rgba(201,168,76,.4); border-radius:12px;
+    box-shadow:0 14px 30px rgba(0,0,0,.55);
+    display:none;
+  }
+  .suggestions.show{ display:block; }
+  .suggestion-item{
+    padding:10px 14px; cursor:pointer; font-size:15.5px;
+    display:flex; align-items:center; gap:10px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .suggestion-item:last-child{ border-bottom:none; }
+  .suggestion-item:hover, .suggestion-item.highlighted{ background:rgba(201,168,76,.16); }
+  .suggestion-item .sg-emoji{ font-size:18px; }
+  .suggestion-empty{ padding:10px 14px; color:var(--lavender); font-style:italic; font-size:14px; }
+
+  .orientation-toggle{display:flex; gap:8px; margin-top:8px;}
+  .orientation-toggle button{
+    flex:1; padding:9px 6px; border-radius:8px; border:1px solid rgba(201,168,76,.35);
+    background:transparent; color:var(--lavender); font-family:'Cinzel', serif; font-size:11px;
+    letter-spacing:.08em; text-transform:uppercase; cursor:pointer; transition:.15s;
+  }
+  .orientation-toggle button.active{background:var(--gold); color:#1b0f34; border-color:var(--gold); font-weight:600;}
+
+  .btn-primary{
+    width:100%; padding:16px; margin-top:8px; border:none; border-radius:12px; cursor:pointer;
+    font-family:'Cinzel', serif; letter-spacing:.14em; text-transform:uppercase; font-size:14px;
+    background:linear-gradient(135deg, var(--gold-bright), var(--gold) 60%, #8a6e2a);
+    color:#1b0f34; font-weight:700;
+    box-shadow:0 8px 24px rgba(201,168,76,.25);
+    transition:transform .15s ease;
+  }
+  .btn-primary:active{transform:scale(.98);}
+  .btn-primary:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
+
+  #zodiacResult{
+    margin-top:14px; padding:12px 14px; border-radius:10px;
+    background:rgba(201,168,76,.08); border:1px solid var(--line);
+    font-family:'Cinzel', serif; font-size:13px; letter-spacing:.05em; color:var(--gold-bright);
+    display:none;
+  }
+
+  #output{display:none;}
+  .reading-header{text-align:center; margin-bottom:20px;}
+  .reading-header .sub{color:var(--lavender); font-size:14px; font-style:italic;}
+
+  .position-block{
+    border-left:2px solid var(--gold); padding-left:16px; margin-bottom:24px; position:relative;
+  }
+  .position-block .roman{
+    font-family:'Cinzel Decorative', serif; font-size:12px; color:var(--gold); letter-spacing:.2em; text-transform:uppercase;
+  }
+  .position-block h3{
+    font-family:'Cinzel', serif; font-size:19px; margin:4px 0 2px; color:var(--ink); font-weight:600;
+  }
+  .position-block .orient-label{
+    display:inline-block; font-size:11px; font-family:'Cinzel', serif; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--void); background:var(--gold-bright);
+    padding:2px 9px; border-radius:20px; margin-bottom:8px;
+  }
+  .position-block .orient-label.rev{background:var(--lavender);}
+  .position-block p{margin:0 0 6px; line-height:1.55; color:#e7dfef;}
+
+  .synthesis{
+    margin-top:6px; padding-top:20px; border-top:1px solid var(--line);
+  }
+  .synthesis h3{font-family:'Cinzel', serif; color:var(--gold-bright); font-size:15px; letter-spacing:.12em; text-transform:uppercase; margin:0 0 10px;}
+  .synthesis p{line-height:1.6; color:#e7dfef;}
+
+  .ai-toggle-row{display:flex; align-items:flex-start; gap:14px;}
+  .switch{ position:relative; flex-shrink:0; cursor:pointer; margin-top:2px; }
+  .switch input{ position:absolute; opacity:0; width:0; height:0; }
+  .switch-track{
+    display:block; width:46px; height:26px; border-radius:20px;
+    background:rgba(168,155,212,.25); border:1px solid rgba(201,168,76,.35);
+    position:relative; transition:background .25s ease;
+  }
+  .switch-thumb{
+    position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%;
+    background:var(--lavender); transition:transform .25s ease, background .25s ease;
+  }
+  .switch input:checked + .switch-track{ background:rgba(201,168,76,.35); }
+  .switch input:checked + .switch-track .switch-thumb{ transform:translateX(20px); background:var(--gold-bright); }
+
+  .ai-toggle-text{ display:flex; flex-direction:column; gap:3px; }
+  .ai-toggle-text strong{ font-family:'Cinzel', serif; font-size:14px; color:var(--ink); font-weight:600; letter-spacing:.02em; }
+  .ai-toggle-text span{ font-size:14.5px; color:var(--lavender); line-height:1.4; }
+
+  .ai-config{
+    max-height:0; overflow:hidden; opacity:0; transition:max-height .35s ease, opacity .3s ease, margin-top .35s ease;
+  }
+  .ai-config.open{ max-height:400px; opacity:1; margin-top:16px; }
+  .ai-config label{ margin-top:12px; }
+  .ai-config label:first-child{ margin-top:0; }
+  .ai-hint{
+    margin-top:12px; font-size:13.5px; line-height:1.5; color:var(--lavender);
+    background:rgba(10,5,22,.4); border:1px solid rgba(201,168,76,.2); border-radius:10px; padding:10px 12px;
+  }
+  .ai-hint code{
+    background:rgba(201,168,76,.15); color:var(--gold-bright); padding:1px 5px; border-radius:5px;
+    font-family:monospace; font-size:12.5px;
+  }
+
+  .ai-status{
+    display:none; align-items:center; gap:10px; margin-bottom:12px;
+    font-family:'Cinzel', serif; font-size:12.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--gold-bright);
+  }
+  .ai-status.show{ display:flex; }
+  .ai-status.error{ color:#e39b9b; }
+  .ai-spinner{
+    width:14px; height:14px; border-radius:50%; border:2px solid rgba(201,168,76,.3); border-top-color:var(--gold-bright);
+    animation:spin .8s linear infinite; flex-shrink:0;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  footer{text-align:center; margin-top:30px; color:rgba(168,155,212,.5); font-size:12px; font-family:'Cinzel', serif; letter-spacing:.1em;}
+
+  ::selection{background:var(--gold); color:#1b0f34;}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <svg class="sigil" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="34" stroke="#c9a84c" stroke-width="1.2" opacity=".8"/>
+      <path d="M50 16 L58 42 L86 42 L63 58 L71 84 L50 68 L29 84 L37 58 L14 42 L42 42 Z" stroke="#e8cf85" stroke-width="1" fill="none" opacity=".9"/>
+      <circle cx="50" cy="50" r="4" fill="#e8cf85"/>
+    </svg>
+    <div class="eyebrow">Arcana · Lectura Rider-Waite</div>
+    <h1>Tres Cartas,<br>Un Destino</h1>
+    <p>Ingresa las cartas de tu tirada y los datos del consultante para recibir una interpretación completa.</p>
+  </header>
+
+  <!-- DATOS DEL CONSULTANTE -->
+  <section class="panel">
+    <h2>Datos del consultante</h2>
+    <div class="grid3">
+      <div>
+        <label>Año</label>
+        <input type="number" id="birthYear" placeholder="1994" min="1900" max="2026">
+      </div>
+      <div>
+        <label>Mes</label>
+        <select id="birthMonth">
+          <option value="">--</option>
+          <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+          <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+          <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+          <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+      </div>
+      <div>
+        <label>Día</label>
+        <input type="number" id="birthDay" placeholder="24" min="1" max="31">
+      </div>
+    </div>
+    <div id="zodiacResult"></div>
+  </section>
+
+  <!-- CARTAS -->
+  <section class="panel">
+    <h2>La tirada</h2>
+
+    <div class="card-slot">
+      <span class="tag">Izquierda · Decir que NO</span>
+      <div class="tarot-visual" id="visual-0">
+        <div class="tarot-visual-inner empty">
+          <span class="tarot-emoji">🂠</span>
+          <span class="tarot-name">Elige una carta</span>
+        </div>
+      </div>
+      <label>Carta</label>
+      <div class="autocomplete-wrap">
+        <input type="text" class="card-input" data-slot="0" placeholder="Escribe el nombre de la carta..." autocomplete="off">
+        <div class="suggestions" id="suggestions-0"></div>
+      </div>
+      <div class="orientation-toggle" data-slot="0">
+        <button type="button" data-o="upright" class="active">Al derecho</button>
+        <button type="button" data-o="reversed">Invertida</button>
+      </div>
+    </div>
+
+    <div class="card-slot">
+      <span class="tag">Centro · La situación</span>
+      <div class="tarot-visual" id="visual-1">
+        <div class="tarot-visual-inner empty">
+          <span class="tarot-emoji">🂠</span>
+          <span class="tarot-name">Elige una carta</span>
+        </div>
+      </div>
+      <label>Carta</label>
+      <div class="autocomplete-wrap">
+        <input type="text" class="card-input" data-slot="1" placeholder="Escribe el nombre de la carta..." autocomplete="off">
+        <div class="suggestions" id="suggestions-1"></div>
+      </div>
+      <div class="orientation-toggle" data-slot="1">
+        <button type="button" data-o="upright" class="active">Al derecho</button>
+        <button type="button" data-o="reversed">Invertida</button>
+      </div>
+    </div>
+
+    <div class="card-slot">
+      <span class="tag">Derecha · Decir que SÍ</span>
+      <div class="tarot-visual" id="visual-2">
+        <div class="tarot-visual-inner empty">
+          <span class="tarot-emoji">🂠</span>
+          <span class="tarot-name">Elige una carta</span>
+        </div>
+      </div>
+      <label>Carta</label>
+      <div class="autocomplete-wrap">
+        <input type="text" class="card-input" data-slot="2" placeholder="Escribe el nombre de la carta..." autocomplete="off">
+        <div class="suggestions" id="suggestions-2"></div>
+      </div>
+      <div class="orientation-toggle" data-slot="2">
+        <button type="button" data-o="upright" class="active">Al derecho</button>
+        <button type="button" data-o="reversed">Invertida</button>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="generarBtn">Revelar la lectura</button>
+  </section>
+
+  <!-- IA CON OLLAMA -->
+  <section class="panel">
+    <h2>Interpretación con IA</h2>
+    <div class="ai-toggle-row">
+      <label class="switch">
+        <input type="checkbox" id="aiEnabled">
+        <span class="switch-track"><span class="switch-thumb"></span></span>
+      </label>
+      <div class="ai-toggle-text">
+        <strong>Usar Ollama para interpretar</strong>
+        <span>Genera la síntesis final con un modelo de IA que corres tú mismo, gratis y sin clave API.</span>
+      </div>
+    </div>
+
+    <div id="ollamaConfig" class="ai-config">
+      <label>Servidor de Ollama</label>
+      <input type="text" id="ollamaHost" placeholder="http://localhost:11434" value="http://localhost:11434">
+      <label>Modelo</label>
+      <input type="text" id="ollamaModel" placeholder="llama3.2" value="llama3.2">
+      <p class="ai-hint">
+        Necesitas tener <strong>Ollama</strong> instalado y corriendo (<code>ollama serve</code>) con el modelo descargado
+        (<code>ollama pull llama3.2</code>). Si abres esta app desde tu celular, usa la IP local de tu computadora
+        en la misma red Wi-Fi (por ejemplo <code>http://192.168.1.20:11434</code>) en vez de <code>localhost</code>,
+        y arranca Ollama con <code>OLLAMA_ORIGINS=*</code> para permitir la conexión desde el navegador.
+      </p>
+    </div>
+  </section>
+
+  <!-- RESULTADO -->
+  <section class="panel" id="output">
+    <div class="reading-header">
+      <div class="eyebrow">La lectura revela</div>
+      <div class="sub" id="consultanteLine"></div>
+    </div>
+    <div id="positions"></div>
+    <div class="synthesis">
+      <h3>Síntesis de la lectura</h3>
+      <div id="aiStatus" class="ai-status"></div>
+      <p id="synthesisText"></p>
+    </div>
+  </section>
+
+  <footer>Rider-Waite · Interpretación generada para uso personal</footer>
+</div>
+
+<script>
+/* ============ ESTRELLAS DE FONDO ============ */
+(function(){
+  const container = document.getElementById('stars');
+  for(let i=0;i<60;i++){
+    const s = document.createElement('span');
+    s.style.left = Math.random()*100+'%';
+    s.style.top = Math.random()*100+'%';
+    s.style.animationDelay = (Math.random()*4)+'s';
+    s.style.opacity = Math.random()*0.7+0.1;
+    container.appendChild(s);
+  }
+})();
+
+/* ============ BASE DE DATOS DE ARCANOS ============ */
+const MAJOR = {
+"El Loco": {imagen:"un joven despreocupado camina hacia un precipicio con un pequeño perro a sus pies, cargando un hatillo y mirando al cielo.", upright:"Nuevos comienzos, espontaneidad, fe en el futuro, un salto de fe hacia lo desconocido con inocencia y libertad.", reversed:"Imprudencia, decisiones apresuradas, riesgo innecesario, falta de dirección clara, ingenuidad que puede causar daño."},
+"El Mago": {imagen:"una figura de pie ante una mesa con los cuatro palos (copa, espada, basto y pentáculo), una mano señala al cielo y la otra a la tierra, con el símbolo del infinito sobre su cabeza.", upright:"Voluntad firme, habilidad y recursos disponibles, capacidad de manifestar lo que se propone con acción decidida.", reversed:"Manipulación, talento desperdiciado, engaño o falta de enfoque; potencial que no se termina de concretar."},
+"La Sacerdotisa": {imagen:"una mujer serena sentada entre dos columnas, una negra y otra blanca, con un pergamino en el regazo y la luna a sus pies.", upright:"Intuición profunda, misterio, sabiduría interior y conexión con el subconsciente; secretos por revelar a su tiempo.", reversed:"Secretos ocultos que salen a la luz, desconexión de la propia intuición, confusión interior o información oculta."},
+"La Emperatriz": {imagen:"una mujer rodeada de naturaleza exuberante, sentada en un trono entre campos de trigo, con el símbolo de Venus en su escudo.", upright:"Abundancia, fertilidad, creatividad y conexión con la naturaleza; un momento de nutrición y crecimiento.", reversed:"Bloqueo creativo, dependencia excesiva de otros, descuido personal, desequilibrio entre dar y recibir."},
+"El Emperador": {imagen:"un hombre severo sobre un trono de piedra decorado con cabezas de carnero, sosteniendo un cetro y un orbe.", upright:"Autoridad, estructura, control y liderazgo; estabilidad construida con disciplina y orden.", reversed:"Rigidez excesiva, abuso de poder, falta de disciplina, tendencia a la tiranía o al descontrol."},
+"El Hierofante": {imagen:"una figura religiosa entre dos columnas y dos discípulos arrodillados, con la mano alzada en gesto de bendición.", upright:"Tradición, enseñanza espiritual, conformidad con instituciones y guía moral establecida.", reversed:"Rebeldía contra las normas, dogmatismo, cuestionamiento profundo de las creencias heredadas, camino no convencional."},
+"Los Enamorados": {imagen:"una pareja bajo un ángel que los bendice desde las alturas, con un árbol de manzanas y otro en llamas detrás de ellos.", upright:"Unión, una elección importante, armonía y valores compartidos; amor genuino y alineado.", reversed:"Desequilibrio en la relación, decisiones basadas en valores erróneos, conflicto de intereses, desconexión afectiva."},
+"El Carro": {imagen:"un guerrero de pie en un carruaje tirado por dos esfinges, una negra y otra blanca, avanzando con determinación.", upright:"Voluntad fuerte, victoria, determinación y control de fuerzas opuestas; avance decidido hacia la meta.", reversed:"Falta de dirección, agresividad descontrolada, obstáculos internos, pérdida del control sobre la propia vida."},
+"La Fuerza": {imagen:"una mujer que doma con suavidad a un león, sosteniendo su mandíbula con serenidad y sin violencia.", upright:"Coraje interior, paciencia y compasión; dominio suave de los propios impulsos y fortaleza emocional.", reversed:"Inseguridad, duda de uno mismo, debilidad ante los impulsos, o bien abuso de poder sobre otros."},
+"El Ermitaño": {imagen:"un anciano encapuchado sobre una montaña nevada, sosteniendo en alto un farol con una estrella en su interior.", upright:"Introspección, búsqueda de la verdad interior, soledad elegida como camino hacia la guía propia.", reversed:"Aislamiento excesivo, soledad no deseada, evasión de la realidad, pérdida de rumbo interior."},
+"La Rueda de la Fortuna": {imagen:"una gran rueda giratoria rodeada de criaturas místicas y símbolos alquímicos, en movimiento constante.", upright:"Ciclos de la vida, destino en movimiento, cambio inevitable; una racha de buena fortuna en camino.", reversed:"Mala racha, resistencia al cambio, ciclos negativos que se repiten, sensación de perder el control sobre el propio destino."},
+"La Justicia": {imagen:"una figura sentada entre dos columnas, sosteniendo una balanza en una mano y una espada recta en la otra.", upright:"Verdad, equidad, causa y efecto; decisiones justas y asunción de responsabilidad.", reversed:"Injusticia, deshonestidad, falta de responsabilidad, desequilibrio legal, ético o personal."},
+"El Colgado": {imagen:"un hombre colgado boca abajo de un pie, atado a un árbol en forma de cruz, con expresión serena y un halo de luz.", upright:"Rendición consciente, una nueva perspectiva, pausa necesaria; sacrificio que tiene un propósito mayor.", reversed:"Estancamiento, resistencia al cambio, sacrificio que se siente inútil, indecisión prolongada."},
+"La Muerte": {imagen:"un esqueleto en armadura montado a caballo, portando una bandera con una rosa blanca, mientras distintas figuras caen ante él.", upright:"Final de una etapa, transformación profunda, renacimiento; soltar aquello que ya cumplió su ciclo.", reversed:"Resistencia al cambio, estancamiento, miedo a cerrar ciclos, una transición que queda incompleta."},
+"La Templanza": {imagen:"un ángel de pie con un pie en tierra y otro en el agua, mezclando el contenido de dos copas de un lado a otro.", upright:"Equilibrio, paciencia y moderación; integración armoniosa de fuerzas opuestas.", reversed:"Desequilibrio, excesos, falta de paciencia, conflictos internos que no terminan de resolverse."},
+"El Diablo": {imagen:"una figura sobre un pedestal con dos personas encadenadas a sus pies, aunque las cadenas están sueltas.", upright:"Ataduras, tentación, patrones destructivos; materialismo, adicción o dependencia que limitan la libertad.", reversed:"Liberación de las propias cadenas, reconocimiento de patrones dañinos, recuperación del poder personal."},
+"La Torre": {imagen:"una torre golpeada por un rayo, con dos figuras cayendo desde lo alto mientras la corona se desprende entre llamas.", upright:"Cambio súbito, revelación impactante, destrucción de estructuras falsas; un caos que resulta necesario.", reversed:"Un cambio evitado que se acumula, miedo al colapso, resistencia a una verdad que tarde o temprano llegará."},
+"La Estrella": {imagen:"una mujer arrodillada junto a un estanque, vertiendo agua de dos jarras bajo un cielo estrellado.", upright:"Esperanza, inspiración y renovación; fe en el futuro y sanación espiritual profunda.", reversed:"Desesperanza, falta de fe, desconexión de la propia inspiración, dudas profundas sobre el camino."},
+"La Luna": {imagen:"un camino entre dos torres bajo una luna con rostro humano, con un perro y un lobo aullando y un cangrejo saliendo del agua.", upright:"Ilusión, intuición profunda, miedos ocultos; el subconsciente activo trayendo incertidumbre a la superficie.", reversed:"La confusión comienza a disiparse, liberación del miedo, mayor claridad después de un período de engaño o duda."},
+"El Sol": {imagen:"un niño montado sobre un caballo blanco bajo un sol radiante, con girasoles de fondo.", upright:"Alegría, éxito, vitalidad y claridad; una etapa de plenitud y optimismo genuino.", reversed:"Alegría postergada, exceso de optimismo, falta de claridad temporal, un éxito que aún es parcial."},
+"El Juicio": {imagen:"un ángel toca una trompeta desde las nubes mientras figuras humanas resucitan de sus tumbas con los brazos abiertos.", upright:"Renacimiento, un llamado interior, evaluación honesta de la vida; tiempo de perdón y renovación.", reversed:"Autocrítica excesiva, negación del llamado interior, dificultad para perdonar a otros o a uno mismo."},
+"El Mundo": {imagen:"una figura danzante envuelta en un velo dentro de una corona de laurel, rodeada por los símbolos de los cuatro evangelistas.", upright:"Culminación, logro, plenitud e integración total; un viaje o ciclo que se completa con éxito.", reversed:"Falta de cierre, metas que quedan incompletas, atajos que impiden alcanzar la verdadera plenitud."}
+};
+const SUITS = {
+"Bastos": ["As","Dos","Tres","Cuatro","Cinco","Seis","Siete","Ocho","Nueve","Diez","Sota","Caballero","Reina","Rey"],
+"Copas": ["As","Dos","Tres","Cuatro","Cinco","Seis","Siete","Ocho","Nueve","Diez","Sota","Caballero","Reina","Rey"],
+"Espadas": ["As","Dos","Tres","Cuatro","Cinco","Seis","Siete","Ocho","Nueve","Diez","Sota","Caballero","Reina","Rey"],
+"Oros": ["As","Dos","Tres","Cuatro","Cinco","Seis","Siete","Ocho","Nueve","Diez","Sota","Caballero","Reina","Rey"]
+};
+
+const MINOR = {
+"As de Bastos": {imagen:"una mano surge de una nube sosteniendo un basto brotado de hojas, sobre un paisaje con un castillo a lo lejos.", upright:"Nuevo impulso creativo e inspiración; el inicio de un proyecto con energía y pasión genuina.", reversed:"Falta de dirección, energía bloqueada, un proyecto que no logra despegar."},
+"Dos de Bastos": {imagen:"un hombre en la muralla de un castillo sostiene un globo terráqueo, mirando al horizonte con un basto fijo a su lado.", upright:"Planificación a futuro, decisiones sobre el propio camino, visión de expansión personal.", reversed:"Miedo a lo desconocido, indecisión, planes que permanecen estancados."},
+"Tres de Bastos": {imagen:"un hombre de espaldas observa barcos en el mar desde un acantilado, con tres bastos clavados en el suelo.", upright:"Expansión, resultados en camino; una visión a largo plazo que empieza a dar frutos.", reversed:"Retrasos, obstáculos en la expansión, falta de previsión ante lo que viene."},
+"Cuatro de Bastos": {imagen:"una guirnalda de flores cuelga entre cuatro bastos, con figuras celebrando frente a un castillo.", upright:"Celebración, estabilidad y armonía en el hogar; un logro que se comparte con otros.", reversed:"Celebración pospuesta, tensión en el entorno familiar o social."},
+"Cinco de Bastos": {imagen:"cinco jóvenes chocan sus bastos entre sí en lo que parece un enfrentamiento o un juego de lucha.", upright:"Competencia y conflictos menores; tensión por diferencias de opinión que buscan resolverse.", reversed:"El conflicto se evita o se resuelve; la tensión acumulada finalmente se libera."},
+"Seis de Bastos": {imagen:"un jinete victorioso con una corona de laurel avanza rodeado de gente, sosteniendo un basto adornado.", upright:"Victoria y reconocimiento público; un éxito merecido tras el esfuerzo invertido.", reversed:"Reconocimiento retrasado, arrogancia, una victoria incompleta o no reconocida por otros."},
+"Siete de Bastos": {imagen:"un hombre en posición elevada defiende su lugar con un basto frente a otros seis que lo amenazan desde abajo.", upright:"Defensa firme de la propia postura, perseverancia ante la oposición, ventaja mantenida con esfuerzo.", reversed:"Agotamiento por defenderse constantemente, sensación de estar superado, ceder terreno."},
+"Ocho de Bastos": {imagen:"ocho bastos vuelan en línea recta por el cielo sobre un paisaje despejado, sugiriendo velocidad.", upright:"Movimiento rápido, noticias que llegan, acción acelerada y avance sin grandes obstáculos.", reversed:"Retrasos y frustración por la lentitud; la comunicación se traba en el camino."},
+"Nueve de Bastos": {imagen:"un hombre vendado y cansado se apoya en un basto, rodeado de otros ocho clavados en el suelo, en actitud vigilante.", upright:"Resiliencia, una última defensa antes del éxito, cautela aprendida de la experiencia.", reversed:"Agotamiento, actitud defensiva excesiva, miedo a bajar la guardia incluso cuando ya no hace falta."},
+"Diez de Bastos": {imagen:"una persona camina encorvada cargando diez bastos pesados, con dificultad para ver el camino hacia el pueblo.", upright:"Una carga pesada, responsabilidad excesiva; el esfuerzo está cerca de su fin.", reversed:"Sobrecarga insostenible; es momento de delegar antes del agotamiento total."},
+"Sota de Bastos": {imagen:"un joven observa con curiosidad un basto brotado que sostiene, de pie sobre un terreno árido.", upright:"Entusiasmo juvenil, nuevas ideas creativas; mensajero de noticias inspiradoras.", reversed:"Impulsividad, ideas sin fundamento sólido, inmadurez a la hora de actuar."},
+"Caballero de Bastos": {imagen:"un jinete impetuoso galopa sobre un caballo encabritado, portando un basto florecido.", upright:"Acción impulsiva, aventura, pasión y energía puestas en movimiento.", reversed:"Imprudencia, impaciencia, acciones apresuradas tomadas sin planificación."},
+"Reina de Bastos": {imagen:"una mujer segura sentada en un trono decorado con leones y girasoles, sosteniendo un basto y un girasol.", upright:"Confianza, independencia, calidez y determinación personal muy magnética.", reversed:"Celos, inseguridad disfrazada de confianza, energía dispersa que no encuentra foco."},
+"Rey de Bastos": {imagen:"un rey sentado en un trono con salamandras y leones tallados, sosteniendo un basto floreciente con firmeza.", upright:"Liderazgo visionario, carisma y dominio pleno de la propia energía creativa.", reversed:"Autoritarismo, impulsividad en el mando, expectativas poco realistas hacia los demás."},
+"As de Copas": {imagen:"una mano surge de una nube sosteniendo una copa desbordante, con una paloma descendiendo hacia ella sobre un estanque.", upright:"Nuevo comienzo emocional, apertura del corazón; una plenitud afectiva que empieza a florecer.", reversed:"Emociones bloqueadas, corazón cerrado, una oportunidad afectiva que se deja pasar."},
+"Dos de Copas": {imagen:"un hombre y una mujer se ofrecen mutuamente una copa cada uno, con un caduceo alado flotando sobre ellos.", upright:"Unión, conexión mutua, una sociedad armoniosa; amor correspondido y equilibrado.", reversed:"Desequilibrio en la relación, desconexión entre ambas partes, ruptura del vínculo."},
+"Tres de Copas": {imagen:"tres mujeres alzan sus copas en un brindis conjunto, rodeadas de frutas y en actitud festiva.", upright:"Celebración entre amigos, sentido de comunidad, alegría genuinamente compartida.", reversed:"Excesos, conflictos grupales, una celebración que resulta vacía o superficial."},
+"Cuatro de Copas": {imagen:"un hombre sentado bajo un árbol observa tres copas frente a él, ignorando una cuarta que una mano le ofrece desde una nube.", upright:"Apatía e introspección; insatisfacción frente a lo que ya se tiene sin apreciarlo del todo.", reversed:"Apertura a nuevas oportunidades; salir del estancamiento emocional."},
+"Cinco de Copas": {imagen:"una figura encapuchada mira con tristeza tres copas derramadas, sin notar las dos copas aún en pie detrás de ella.", upright:"Pérdida y decepción; un duelo por aquello que no resultó como se esperaba.", reversed:"Aceptación y sanación; comenzar a ver lo que aún queda en pie."},
+"Seis de Copas": {imagen:"dos niños intercambian copas llenas de flores en un patio tranquilo, en un ambiente de nostalgia e inocencia.", upright:"Nostalgia, recuerdos del pasado, reencuentros llenos de inocencia.", reversed:"Apego al pasado, idealización de tiempos que ya pasaron, dificultad para avanzar."},
+"Siete de Copas": {imagen:"una silueta observa siete copas flotando entre nubes, cada una con una visión distinta.", upright:"Opciones múltiples, fantasía e ilusiones; se necesita discernimiento para elegir bien.", reversed:"Claridad después de la confusión; una elección definida mientras las ilusiones se disipan."},
+"Ocho de Copas": {imagen:"una figura se aleja de espaldas, dejando atrás ocho copas apiladas, caminando bajo una luna hacia las montañas.", upright:"Alejarse en busca de algo más profundo; dejar atrás lo conocido aunque duela.", reversed:"Miedo a avanzar, estancamiento por temor a lo desconocido."},
+"Nueve de Copas": {imagen:"un hombre satisfecho se sienta con los brazos cruzados frente a nueve copas dispuestas en arco detrás de él.", upright:"Satisfacción, deseos cumplidos, un genuino bienestar emocional.", reversed:"Satisfacción superficial, excesos, insatisfacción oculta detrás de la apariencia."},
+"Diez de Copas": {imagen:"una familia contempla un arcoíris con diez copas dispuestas en el cielo, celebrando frente a su hogar.", upright:"Felicidad familiar, armonía duradera; una plenitud emocional compartida con los seres queridos.", reversed:"Discordia familiar, ruptura de la armonía, expectativas afectivas que no se cumplen."},
+"Sota de Copas": {imagen:"un joven observa con sorpresa un pez que emerge de su copa, de pie junto al mar.", upright:"Mensajes emocionales, sensibilidad artística, nuevas conexiones afectivas que se abren.", reversed:"Inmadurez emocional, comportamiento errático, mensajes que se malinterpretan."},
+"Caballero de Copas": {imagen:"un jinete avanza despacio y con gracia, sosteniendo una copa como si ofreciera un regalo o una propuesta.", upright:"Romanticismo, propuestas hechas con el corazón, búsqueda idealista del amor.", reversed:"Manipulación emocional, promesas vacías, una idealización excesiva de la otra persona."},
+"Reina de Copas": {imagen:"una mujer contempla con ensoñación una copa cerrada y ornamentada, sentada junto al mar en un trono decorado con conchas.", upright:"Empatía, intuición emocional profunda, un cuidado compasivo hacia los demás.", reversed:"Sobrecarga emocional, dependencia afectiva, límites poco claros con los demás."},
+"Rey de Copas": {imagen:"un rey sereno se sienta en un trono flotante sobre el mar agitado, sosteniendo una copa y un cetro con calma.", upright:"Equilibrio emocional, madurez y sabiduría compasiva ante los sentimientos propios y ajenos.", reversed:"Manipulación emocional, volatilidad oculta bajo una calma aparente."},
+"As de Espadas": {imagen:"una mano surge de una nube sosteniendo en alto una espada coronada con una guirnalda de laurel y palma.", upright:"Claridad mental, una verdad que se revela; una idea nueva y decisiva.", reversed:"Confusión, una verdad distorsionada, decisiones nubladas por la mente."},
+"Dos de Espadas": {imagen:"una mujer con los ojos vendados sostiene dos espadas cruzadas sobre su pecho, sentada de espaldas al mar.", upright:"Una decisión pendiente, equilibrio tenso, necesidad de ver la situación con más claridad.", reversed:"Indecisión prolongada, información que se evita, un bloqueo mental que persiste."},
+"Tres de Espadas": {imagen:"tres espadas atraviesan un corazón rojo bajo un cielo nublado y lluvioso.", upright:"Dolor emocional, una ruptura, una verdad dolorosa que debe enfrentarse tarde o temprano.", reversed:"Sanación en proceso, perdón, liberación del dolor que se venía cargando."},
+"Cuatro de Espadas": {imagen:"la figura de un caballero yace en reposo sobre una tumba, con tres espadas colgadas en la pared y una debajo de él.", upright:"Descanso y recuperación; una pausa necesaria para la mente y el cuerpo.", reversed:"Agotamiento por falta de descanso, un regreso forzado a la actividad antes de estar listo."},
+"Cinco de Espadas": {imagen:"un hombre sostiene tres espadas con expresión desafiante mientras otros dos se alejan derrotados con la cabeza baja.", upright:"Conflicto, una victoria obtenida a costa de otros, tensión que aún no se resuelve.", reversed:"Reconciliación, dejar atrás el conflicto, aprender de la derrota vivida."},
+"Seis de Espadas": {imagen:"un barquero traslada a una mujer y un niño en una barca hacia aguas más calmas, con seis espadas a bordo.", upright:"Transición, dejar atrás las dificultades, avanzar hacia aguas más calmas.", reversed:"Resistencia a dejar el pasado atrás, una transición que se siente estancada."},
+"Siete de Espadas": {imagen:"un hombre se aleja sigilosamente de un campamento cargando cinco espadas, dejando dos atrás.", upright:"Estrategia, posible engaño; actuar con astucia o discreción ante la situación.", reversed:"Una verdad sale a la luz, confesión, consecuencias de un engaño anterior."},
+"Ocho de Espadas": {imagen:"una mujer atada y con los ojos vendados está rodeada por ocho espadas clavadas en el suelo a su alrededor.", upright:"Sensación de estar atrapado, autolimitación, un miedo que paraliza más de lo real.", reversed:"Liberación de las propias limitaciones, una nueva perspectiva de la situación."},
+"Nueve de Espadas": {imagen:"una figura se sienta en la cama con el rostro entre las manos, angustiada, bajo nueve espadas colgadas en la pared.", upright:"Ansiedad, preocupación excesiva, pensamientos angustiantes que aparecen sobre todo de noche.", reversed:"Alivio de la ansiedad, enfrentar los miedos, notar que la situación no es tan grave como parecía."},
+"Diez de Espadas": {imagen:"un hombre yace boca abajo con diez espadas clavadas en la espalda, bajo un cielo oscuro que empieza a aclarar en el horizonte.", upright:"Un final doloroso, el colapso de una situación, tocar fondo antes de poder subir.", reversed:"Recuperación tras el final; la peor parte ya pasó y comienza el renacer."},
+"Sota de Espadas": {imagen:"un joven alerta sostiene una espada en alto mientras el viento agita su capa, escrutando el horizonte.", upright:"Curiosidad mental, nuevas ideas, comunicación directa y sin rodeos.", reversed:"Chismes, palabras hirientes, ideas que se ejecutan mal por falta de reflexión."},
+"Caballero de Espadas": {imagen:"un jinete carga a toda velocidad con la espada en alto, entre nubes agitadas por el viento.", upright:"Acción rápida y directa, determinación mental, una búsqueda decidida de la verdad.", reversed:"Impulsividad agresiva, imprudencia verbal, acciones tomadas con demasiada prisa."},
+"Reina de Espadas": {imagen:"una mujer de mirada firme sostiene una espada erguida, sentada en un trono entre nubes, con una mano extendida.", upright:"Claridad, independencia, una honestidad directa que no da rodeos.", reversed:"Frialdad excesiva, crítica severa, aislamiento provocado por rigidez mental."},
+"Rey de Espadas": {imagen:"un rey serio sostiene una espada recta en su trono, con mariposas y símbolos de aire tallados alrededor.", upright:"Autoridad intelectual, pensamiento claro, justicia basada en la razón.", reversed:"Manipulación mental, abuso de la autoridad, una frialdad calculadora hacia los demás."},
+"As de Oros": {imagen:"una mano surge de una nube sosteniendo un gran pentáculo dorado, sobre un jardín florido con un sendero hacia colinas lejanas.", upright:"Una nueva oportunidad material, prosperidad en camino, la semilla de una futura abundancia.", reversed:"Oportunidad perdida, inestabilidad financiera, falta de planificación."},
+"Dos de Oros": {imagen:"un joven hace malabares con dos pentáculos unidos por una cinta en forma de infinito, con barcos meciéndose en el mar de fondo.", upright:"Equilibrio entre prioridades, adaptabilidad, manejo hábil de múltiples responsabilidades.", reversed:"Desorganización, sobrecarga, dificultad para equilibrar los propios recursos."},
+"Tres de Oros": {imagen:"un artesano talla piedra en una catedral mientras dos figuras observan y revisan sus planos.", upright:"Trabajo en equipo, colaboración, reconocimiento merecido por las propias habilidades.", reversed:"Falta de cooperación, desorganización grupal, un trabajo que no es reconocido."},
+"Cuatro de Oros": {imagen:"un hombre sostiene con fuerza un pentáculo sobre su pecho, con otros dos bajo sus pies y uno sobre su corona.", upright:"Seguridad material, control de los recursos propios, cautela financiera.", reversed:"Apego excesivo a lo material, avaricia, miedo a la pérdida que paraliza."},
+"Cinco de Oros": {imagen:"dos figuras necesitadas caminan bajo la nieve junto a una ventana iluminada de una iglesia, con cinco pentáculos arriba.", upright:"Dificultad económica, sensación de carencia, un momento realmente difícil.", reversed:"Recuperación financiera, el fin de las dificultades, una ayuda que finalmente llega."},
+"Seis de Oros": {imagen:"un mercader reparte monedas entre dos mendigos arrodillados, sosteniendo una balanza en la otra mano.", upright:"Generosidad, dar y recibir en equilibrio, apoyo mutuo genuino.", reversed:"Desequilibrio en el intercambio, generosidad interesada, deudas que quedan sin resolver."},
+"Siete de Oros": {imagen:"un agricultor apoyado en su azada observa pensativo una planta cargada de siete pentáculos.", upright:"Paciencia, evaluación del propio progreso, una inversión pensada a largo plazo.", reversed:"Impaciencia, esfuerzo que no muestra resultados visibles, frustración por la espera."},
+"Ocho de Oros": {imagen:"un artesano concentrado talla pentáculos uno tras otro, con varios ya terminados colgados frente a él.", upright:"Dedicación, una maestría en desarrollo, trabajo detallado y constante.", reversed:"Trabajo descuidado, falta de motivación, un perfeccionismo que termina estancando."},
+"Nueve de Oros": {imagen:"una mujer elegante se pasea entre sus viñedos con un halcón en la mano, rodeada de nueve pentáculos entre las vides.", upright:"Independencia financiera, disfrute del propio esfuerzo, autosuficiencia genuina.", reversed:"Dependencia económica, un disfrute vacío, aislamiento autoimpuesto."},
+"Diez de Oros": {imagen:"una familia extendida se reúne bajo un arco con diez pentáculos dispuestos, en una escena de hogar y linaje.", upright:"Herencia, estabilidad familiar y financiera a largo plazo, un legado que perdura.", reversed:"Conflictos familiares por dinero, inestabilidad en el patrimonio compartido."},
+"Sota de Oros": {imagen:"un joven contempla con atención un pentáculo que sostiene con ambas manos, de pie en un campo fértil.", upright:"Nuevas oportunidades de aprendizaje o trabajo, una mentalidad práctica y aplicada.", reversed:"Falta de compromiso, oportunidades desaprovechadas, inmadurez en lo práctico."},
+"Caballero de Oros": {imagen:"un jinete avanza con calma y método sobre un caballo robusto, sosteniendo un pentáculo frente a un campo arado.", upright:"Constancia, esfuerzo metódico, responsabilidad sostenida en el trabajo.", reversed:"Estancamiento, rutina excesiva, resistencia a un cambio que ya es necesario."},
+"Reina de Oros": {imagen:"una mujer serena sostiene un pentáculo en su regazo, rodeada de naturaleza abundante y un conejo a sus pies.", upright:"Practicidad, cuidado del hogar y de los recursos, una generosidad muy terrenal.", reversed:"Descuido personal, prioridades materiales desequilibradas frente a lo emocional."},
+"Rey de Oros": {imagen:"un rey rodeado de vides y símbolos de prosperidad sostiene un pentáculo y un cetro, con un castillo próspero de fondo.", upright:"Éxito material, liderazgo empresarial, seguridad junto con generosidad.", reversed:"Materialismo excesivo, rigidez financiera, abuso del poder económico sobre otros."}
+};
+const ALL_CARDS = Object.assign({}, MAJOR, MINOR);
+
+/* ============ EMOJIS POR CARTA ============ */
+const MAJOR_EMOJI = {
+"El Loco":"🃏", "El Mago":"🪄", "La Sacerdotisa":"🌙", "La Emperatriz":"🌾",
+"El Emperador":"👑", "El Hierofante":"⛪", "Los Enamorados":"💞", "El Carro":"🏇",
+"La Fuerza":"🦁", "El Ermitaño":"🏮", "La Rueda de la Fortuna":"🎡", "La Justicia":"⚖️",
+"El Colgado":"🙃", "La Muerte":"💀", "La Templanza":"👼", "El Diablo":"😈",
+"La Torre":"🗼", "La Estrella":"⭐", "La Luna":"🌕", "El Sol":"☀️",
+"El Juicio":"📯", "El Mundo":"🌍"
+};
+const SUIT_EMOJI = {"Bastos":"🔥", "Copas":"🍷", "Espadas":"⚔️", "Oros":"🪙"};
+
+function getEmoji(name){
+  if(MAJOR_EMOJI[name]) return MAJOR_EMOJI[name];
+  const suit = name.split(" de ")[1];
+  return SUIT_EMOJI[suit] || "🔮";
+}
+
+/* ============ SIGNOS ZODIACALES ============ */
+const ZODIAC = [
+  {name:"Capricornio", from:[12,22], to:[1,19], element:"Tierra", desc:"disciplina, ambición y sentido práctico"},
+  {name:"Acuario", from:[1,20], to:[2,18], element:"Aire", desc:"independencia, originalidad y visión de futuro"},
+  {name:"Piscis", from:[2,19], to:[3,20], element:"Agua", desc:"sensibilidad, intuición y una imaginación profunda"},
+  {name:"Aries", from:[3,21], to:[4,19], element:"Fuego", desc:"iniciativa, valentía y una energía impulsiva"},
+  {name:"Tauro", from:[4,20], to:[5,20], element:"Tierra", desc:"constancia, sensualidad y apego a la estabilidad"},
+  {name:"Géminis", from:[5,21], to:[6,20], element:"Aire", desc:"curiosidad, comunicación y versatilidad mental"},
+  {name:"Cáncer", from:[6,21], to:[7,22], element:"Agua", desc:"sensibilidad emocional, protección y apego al hogar"},
+  {name:"Leo", from:[7,23], to:[8,22], element:"Fuego", desc:"orgullo, generosidad y necesidad de brillar"},
+  {name:"Virgo", from:[8,23], to:[9,22], element:"Tierra", desc:"análisis, perfeccionismo y sentido del deber"},
+  {name:"Libra", from:[9,23], to:[10,22], element:"Aire", desc:"búsqueda de equilibrio, diplomacia y armonía"},
+  {name:"Escorpio", from:[10,23], to:[11,21], element:"Agua", desc:"intensidad emocional, transformación y profundidad"},
+  {name:"Sagitario", from:[11,22], to:[12,21], element:"Fuego", desc:"optimismo, libertad y espíritu aventurero"}
+];
+
+function getZodiac(month, day){
+  for(const z of ZODIAC){
+    const [fm, fd] = z.from;
+    const [tm, td] = z.to;
+    if(fm===tm){
+      if(month===fm && day>=fd && day<=td) return z;
+    } else {
+      if((month===fm && day>=fd) || (month===tm && day<=td)) return z;
+    }
+  }
+  return null;
+}
+
+/* ============ ESTADO DE CARTAS SELECCIONADAS ============ */
+const ALL_CARD_NAMES = Object.keys(ALL_CARDS);
+const selectedCard = {0:null, 1:null, 2:null};
+const orientationState = {0:"upright", 1:"upright", 2:"upright"};
+
+function normalize(str){
+  return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+}
+
+function renderVisual(slot){
+  const inner = document.querySelector('#visual-'+slot+' .tarot-visual-inner');
+  const name = selectedCard[slot];
+  const emojiEl = inner.querySelector('.tarot-emoji');
+  const nameEl = inner.querySelector('.tarot-name');
+  if(name){
+    inner.classList.remove('empty');
+    emojiEl.textContent = getEmoji(name);
+    nameEl.textContent = name;
+  } else {
+    inner.classList.add('empty');
+    emojiEl.textContent = '🂠';
+    nameEl.textContent = 'Elige una carta';
+  }
+  inner.classList.toggle('reversed', orientationState[slot] === 'reversed');
+}
+
+/* ============ AUTOCOMPLETADO DE CARTAS ============ */
+document.querySelectorAll('.card-input').forEach(input=>{
+  const slot = input.getAttribute('data-slot');
+  const box = document.getElementById('suggestions-'+slot);
+
+  function showSuggestions(){
+    const q = normalize(input.value.trim());
+    let matches;
+    if(!q){
+      matches = ALL_CARD_NAMES.slice(0, 8);
+    } else {
+      matches = ALL_CARD_NAMES.filter(n => normalize(n).includes(q)).slice(0, 8);
+    }
+    box.innerHTML = '';
+    if(matches.length === 0){
+      box.innerHTML = '<div class="suggestion-empty">Sin coincidencias. Prueba con "Copas", "Espadas", "Loco"...</div>';
+    } else {
+      matches.forEach(name=>{
+        const item = document.createElement('div');
+        item.className = 'suggestion-item';
+        item.innerHTML = `<span class="sg-emoji">${getEmoji(name)}</span><span>${name}</span>`;
+        item.addEventListener('mousedown', (e)=>{
+          e.preventDefault();
+          input.value = name;
+          selectedCard[slot] = name;
+          renderVisual(slot);
+          box.classList.remove('show');
+        });
+        box.appendChild(item);
+      });
+    }
+    box.classList.add('show');
+  }
+
+  input.addEventListener('focus', showSuggestions);
+  input.addEventListener('input', ()=>{
+    selectedCard[slot] = ALL_CARD_NAMES.includes(input.value) ? input.value : null;
+    renderVisual(slot);
+    showSuggestions();
+  });
+  input.addEventListener('blur', ()=> setTimeout(()=> box.classList.remove('show'), 120));
+});
+
+/* ============ TOGGLE DE ORIENTACIÓN (con animación de giro) ============ */
+document.querySelectorAll('.orientation-toggle').forEach(group=>{
+  const slot = group.getAttribute('data-slot');
+  group.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      group.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      orientationState[slot] = btn.getAttribute('data-o');
+      renderVisual(slot);
+    });
+  });
+});
+
+/* ============ ZODIACO EN VIVO ============ */
+function updateZodiacDisplay(){
+  const m = parseInt(document.getElementById('birthMonth').value);
+  const d = parseInt(document.getElementById('birthDay').value);
+  const box = document.getElementById('zodiacResult');
+  if(m && d){
+    const z = getZodiac(m,d);
+    if(z){
+      box.style.display = 'block';
+      box.textContent = "✧ Signo solar: "+z.name+" · Elemento "+z.element;
+      return z;
+    }
+  }
+  box.style.display = 'none';
+  return null;
+}
+document.getElementById('birthMonth').addEventListener('change', updateZodiacDisplay);
+document.getElementById('birthDay').addEventListener('input', updateZodiacDisplay);
+
+/* ============ GENERAR LECTURA ============ */
+const POSITIONS = [
+  {roman:"NO", label:"Razones para decir que no", frame:"Esta carta señala por qué convendría decir que NO, ya que representa"},
+  {roman:"•", label:"La situación", frame:"El corazón del asunto está representado por"},
+  {roman:"SÍ", label:"Razones para decir que sí", frame:"Esta carta señala por qué convendría decir que SÍ, ya que representa"}
+];
+
+/* ============ TOGGLE DEL PANEL DE OLLAMA ============ */
+const aiEnabledBox = document.getElementById('aiEnabled');
+const ollamaConfigBox = document.getElementById('ollamaConfig');
+aiEnabledBox.addEventListener('change', ()=>{
+  ollamaConfigBox.classList.toggle('open', aiEnabledBox.checked);
+});
+
+/* ============ LLAMADA A OLLAMA ============ */
+async function askOllama(host, model, prompt){
+  const url = host.replace(/\/+$/, '') + '/api/generate';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ model, prompt, stream:false })
+  });
+  if(!res.ok) throw new Error('El servidor respondió con estado ' + res.status);
+  const data = await res.json();
+  if(!data.response) throw new Error('Ollama no devolvió una respuesta de texto.');
+  return data.response.trim();
+}
+
+function buildOllamaPrompt(cardNames, orientationState, zodiac, consultanteLine){
+  const noRev = orientationState[0]==='reversed' ? ' (invertida)' : ' (al derecho)';
+  const sitRev = orientationState[1]==='reversed' ? ' (invertida)' : ' (al derecho)';
+  const yesRev = orientationState[2]==='reversed' ? ' (invertida)' : ' (al derecho)';
+  let p = `Eres un tarotista profesional experto en la baraja Rider-Waite. Te doy una tirada de tres cartas con un significado fijo de posición:\n\n`;
+  p += `- Carta IZQUIERDA (razones para decir que NO): ${cardNames[0]}${noRev}\n`;
+  p += `- Carta CENTRAL (la situación de fondo): ${cardNames[1]}${sitRev}\n`;
+  p += `- Carta DERECHA (razones para decir que SÍ): ${cardNames[2]}${yesRev}\n\n`;
+  if(zodiac){
+    p += `El consultante nació bajo el signo de ${zodiac.name}, elemento ${zodiac.element}, asociado a ${zodiac.desc}.\n\n`;
+  }
+  p += `Escribe en español, en un solo párrafo de máximo 160 palabras, una interpretación coherente y cálida como tarotista profesional, `;
+  p += `que conecte las tres cartas entre sí, explique qué tan fuerte es la razón para decir NO frente a la razón para decir SÍ `;
+  p += `(teniendo en cuenta si cada carta está al derecho o invertida), y cierre con una inclinación clara: hacia el NO, hacia el SÍ, `;
+  p += `o hacia la prudencia de esperar. No uses listas ni encabezados, solo prosa fluida.`;
+  return p;
+}
+
+document.getElementById('generarBtn').addEventListener('click', async ()=>{
+  const cardNames = [selectedCard[0], selectedCard[1], selectedCard[2]];
+
+  if(cardNames.some(n=>!n)){
+    alert("Escribe y selecciona las tres cartas de la tirada antes de continuar.");
+    return;
+  }
+
+  const year = document.getElementById('birthYear').value;
+  const month = parseInt(document.getElementById('birthMonth').value);
+  const day = parseInt(document.getElementById('birthDay').value);
+  const zodiac = (month && day) ? getZodiac(month, day) : null;
+
+  // Encabezado del consultante
+  let consultanteLine = "";
+  if(year || zodiac){
+    const parts = [];
+    if(day && month && year) parts.push("nacido el "+day+"/"+month+"/"+year);
+    if(zodiac) parts.push("bajo el signo de "+zodiac.name+" ("+zodiac.element+")");
+    consultanteLine = "Para el consultante " + parts.join(", ");
+  }
+  document.getElementById('consultanteLine').textContent = consultanteLine;
+
+  // Bloques de posición
+  const positionsDiv = document.getElementById('positions');
+  positionsDiv.innerHTML = "";
+
+  cardNames.forEach((name, i)=>{
+    const orientation = orientationState[i];
+    const data = ALL_CARDS[name];
+    const meaning = orientation === 'upright' ? data.upright : data.reversed;
+    const pos = POSITIONS[i];
+
+    const block = document.createElement('div');
+    block.className = 'position-block';
+    block.innerHTML = `
+      <div class="roman">${pos.roman} · ${pos.label}</div>
+      <h3>${getEmoji(name)} ${name}</h3>
+      <span class="orient-label ${orientation==='reversed'?'rev':''}">${orientation==='reversed'?'Invertida':'Al derecho'}</span>
+      ${data.imagen ? `<p style="font-style:italic; color:var(--lavender); font-size:15px;">La carta muestra ${data.imagen}</p>` : ""}
+      <p>${pos.frame} <strong>${name}</strong>${orientation==='reversed'?' (invertida)':''}: ${meaning}</p>
+    `;
+    positionsDiv.appendChild(block);
+  });
+
+  // Síntesis final (local, basada en reglas): coherencia entre NO (izquierda) · Situación (centro) · SÍ (derecha)
+  const noReversed = orientationState[0] === 'reversed';
+  const situationReversed = orientationState[1] === 'reversed';
+  const yesReversed = orientationState[2] === 'reversed';
+
+  let synth = "La carta central, " + cardNames[1] + (situationReversed ? " (invertida)" : "") +
+    ", describe el corazón del asunto que se está consultando. A un lado, " + cardNames[0] +
+    (noReversed ? " invertida" : "") + " concentra las razones para decir NO, y al otro, " + cardNames[2] +
+    (yesReversed ? " invertida" : "") + " concentra las razones para decir SÍ. ";
+
+  if(situationReversed){
+    synth += "Que la carta de la situación aparezca invertida sugiere que hay algo aún no del todo visible o consciente en el fondo del asunto, así que conviene mirar con calma antes de inclinarse hacia cualquiera de los dos lados. ";
+  }
+
+  if(!noReversed && yesReversed){
+    synth += "El NO se presenta al derecho mientras que el SÍ aparece invertido: la advertencia de " + cardNames[0] +
+      " mantiene toda su fuerza, mientras que la razón para aceptar representada por " + cardNames[2] +
+      " está bloqueada, es prematura o no se sostiene del todo todavía. La balanza se inclina hacia decir que NO, al menos por ahora.";
+  } else if(noReversed && !yesReversed){
+    synth += "El NO aparece invertido mientras que el SÍ se presenta al derecho: la advertencia de " + cardNames[0] +
+      " pierde fuerza, está atenuada o responde más a un miedo que a un riesgo real, mientras que la razón para aceptar representada por " + cardNames[2] +
+      " se sostiene con claridad. La balanza se inclina hacia decir que SÍ.";
+  } else if(!noReversed && !yesReversed){
+    synth += "Ambas cartas —la del NO y la del SÍ— aparecen al derecho, lo que indica que las dos fuerzas son reales y tienen peso genuino. No hay una respuesta automática: la decisión final debe apoyarse en lo que " + cardNames[1] +
+      " revela sobre la situación de fondo, más que en una de las dos cartas por sí sola.";
+  } else {
+    synth += "Tanto el NO como el SÍ aparecen invertidos, lo que sugiere que ninguna de las dos fuerzas se manifiesta todavía con claridad: es un momento para observar más que para decidir de forma apresurada, dejando que " + cardNames[1] +
+      " termine de revelarse antes de inclinar la balanza.";
+  }
+
+  if(zodiac){
+    synth += " Considerando que el consultante nació bajo " + zodiac.name + ", signo de elemento " + zodiac.element.toLowerCase() +
+             " asociado a " + zodiac.desc + ", vale la pena leer esta decisión también a la luz de ese temperamento: puede ser justo la cualidad que ayuda a inclinarse hacia un lado, o aquello que conviene equilibrar antes de decidir.";
+  } else {
+    synth += " Para afinar aún más esta lectura, aportar el mes y el día de nacimiento permite cruzar la decisión con el temperamento propio del signo zodiacal del consultante.";
+  }
+
+  const synthesisTextEl = document.getElementById('synthesisText');
+  const aiStatusEl = document.getElementById('aiStatus');
+  synthesisTextEl.textContent = synth;
+  aiStatusEl.className = 'ai-status';
+  aiStatusEl.innerHTML = '';
+
+  document.getElementById('output').style.display = 'block';
+  document.getElementById('output').scrollIntoView({behavior:'smooth', block:'start'});
+
+  // Si la IA (Ollama) está activada, intenta reemplazar la síntesis local por una generada
+  if(aiEnabledBox.checked){
+    const host = document.getElementById('ollamaHost').value.trim() || 'http://localhost:11434';
+    const model = document.getElementById('ollamaModel').value.trim() || 'llama3.2';
+
+    aiStatusEl.className = 'ai-status show';
+    aiStatusEl.innerHTML = '<span class="ai-spinner"></span> Consultando a Ollama ('+model+')...';
+
+    try{
+      const prompt = buildOllamaPrompt(cardNames, orientationState, zodiac, consultanteLine);
+      const aiText = await askOllama(host, model, prompt);
+      synthesisTextEl.textContent = aiText;
+      aiStatusEl.className = 'ai-status show';
+      aiStatusEl.innerHTML = '✧ Interpretación generada con Ollama ('+model+')';
+    } catch(err){
+      aiStatusEl.className = 'ai-status show error';
+      aiStatusEl.innerHTML = '⚠ No se pudo conectar con Ollama. Se muestra la interpretación local. ('+err.message+')';
+    }
+  }
+});
+</script>
+</body>
+</html>
