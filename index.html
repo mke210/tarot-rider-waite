@@ -362,7 +362,7 @@
     <button class="btn-primary" id="generarBtn">Revelar la lectura</button>
   </section>
 
-  <!-- IA CON OLLAMA -->
+  <!-- IA CON GROQ -->
   <section class="panel">
     <h2>Interpretación con IA</h2>
     <div class="ai-toggle-row">
@@ -371,24 +371,25 @@
         <span class="switch-track"><span class="switch-thumb"></span></span>
       </label>
       <div class="ai-toggle-text">
-        <strong>Usar Ollama para interpretar</strong>
-        <span>Genera la síntesis final con un modelo de IA que corres tú mismo, gratis y sin clave API.</span>
+        <strong>Usar Groq para interpretar</strong>
+        <span>Genera la síntesis final con un modelo de IA en la nube, gratis y 100% en línea.</span>
       </div>
     </div>
 
-    <div id="ollamaConfig" class="ai-config">
-      <label>Servidor de Ollama</label>
-      <input type="text" id="ollamaHost" placeholder="http://localhost:11434" value="http://localhost:11434">
+    <div id="groqConfig" class="ai-config">
+      <label>Clave API de Groq (gratis)</label>
+      <input type="password" id="groqApiKey" placeholder="gsk_...">
       <label>Modelo</label>
-      <input type="text" id="ollamaModel" placeholder="llama3.2" value="llama3.2">
+      <input type="text" id="groqModel" placeholder="llama-3.3-70b-versatile" value="llama-3.3-70b-versatile">
       <p class="ai-hint">
-        Necesitas tener <strong>Ollama</strong> instalado y corriendo (<code>ollama serve</code>) con el modelo descargado
-        (<code>ollama pull llama3.2</code>). Si abres esta app desde tu celular, usa la IP local de tu computadora
-        en la misma red Wi-Fi (por ejemplo <code>http://192.168.1.20:11434</code>) en vez de <code>localhost</code>,
-        y arranca Ollama con <code>OLLAMA_ORIGINS=*</code> para permitir la conexión desde el navegador.
+        Consigue tu clave gratuita en <strong>console.groq.com/keys</strong> (crea una cuenta gratis, clic en
+        "Create API Key" y pégala aquí). No necesitas instalar nada ni tener tu computadora encendida:
+        la interpretación se genera en los servidores de Groq. Tu clave solo se usa en tu navegador y no se guarda
+        en ningún servidor ni se comparte; si recargas la página tendrás que volver a pegarla.
       </p>
     </div>
   </section>
+
 
   <!-- RESULTADO -->
   <section class="panel" id="output">
@@ -667,32 +668,47 @@ const POSITIONS = [
   {roman:"SÍ", label:"Razones para decir que sí", frame:"Esta carta señala por qué convendría decir que SÍ, ya que representa"}
 ];
 
-/* ============ TOGGLE DEL PANEL DE OLLAMA ============ */
+/* ============ TOGGLE DEL PANEL DE GROQ ============ */
 const aiEnabledBox = document.getElementById('aiEnabled');
-const ollamaConfigBox = document.getElementById('ollamaConfig');
+const groqConfigBox = document.getElementById('groqConfig');
 aiEnabledBox.addEventListener('change', ()=>{
-  ollamaConfigBox.classList.toggle('open', aiEnabledBox.checked);
+  groqConfigBox.classList.toggle('open', aiEnabledBox.checked);
 });
 
-/* ============ LLAMADA A OLLAMA ============ */
-async function askOllama(host, model, prompt){
-  const url = host.replace(/\/+$/, '') + '/api/generate';
-  const res = await fetch(url, {
+/* ============ LLAMADA A GROQ (API compatible con OpenAI) ============ */
+async function askGroq(apiKey, model, prompt){
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ model, prompt, stream:false })
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: 'Eres un tarotista profesional, cálido y directo, experto en la baraja Rider-Waite.' },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.8,
+      max_tokens: 400
+    })
   });
-  if(!res.ok) throw new Error('El servidor respondió con estado ' + res.status);
+  if(!res.ok){
+    const errBody = await res.text().catch(()=>"");
+    if(res.status === 401) throw new Error('Clave API inválida. Revisa que la copiaste completa desde console.groq.com/keys.');
+    throw new Error('El servidor respondió con estado ' + res.status + (errBody ? ' — ' + errBody.slice(0,120) : ''));
+  }
   const data = await res.json();
-  if(!data.response) throw new Error('Ollama no devolvió una respuesta de texto.');
-  return data.response.trim();
+  const text = data?.choices?.[0]?.message?.content;
+  if(!text) throw new Error('Groq no devolvió una respuesta de texto.');
+  return text.trim();
 }
 
-function buildOllamaPrompt(cardNames, orientationState, zodiac, consultanteLine){
+function buildAiPrompt(cardNames, orientationState, zodiac, consultanteLine){
   const noRev = orientationState[0]==='reversed' ? ' (invertida)' : ' (al derecho)';
   const sitRev = orientationState[1]==='reversed' ? ' (invertida)' : ' (al derecho)';
   const yesRev = orientationState[2]==='reversed' ? ' (invertida)' : ' (al derecho)';
-  let p = `Eres un tarotista profesional experto en la baraja Rider-Waite. Te doy una tirada de tres cartas con un significado fijo de posición:\n\n`;
+  let p = `Te doy una tirada de tres cartas del tarot Rider-Waite con un significado fijo de posición:\n\n`;
   p += `- Carta IZQUIERDA (razones para decir que NO): ${cardNames[0]}${noRev}\n`;
   p += `- Carta CENTRAL (la situación de fondo): ${cardNames[1]}${sitRev}\n`;
   p += `- Carta DERECHA (razones para decir que SÍ): ${cardNames[2]}${yesRev}\n\n`;
@@ -797,23 +813,28 @@ document.getElementById('generarBtn').addEventListener('click', async ()=>{
   document.getElementById('output').style.display = 'block';
   document.getElementById('output').scrollIntoView({behavior:'smooth', block:'start'});
 
-  // Si la IA (Ollama) está activada, intenta reemplazar la síntesis local por una generada
+  // Si la IA (Groq) está activada, intenta reemplazar la síntesis local por una generada
   if(aiEnabledBox.checked){
-    const host = document.getElementById('ollamaHost').value.trim() || 'http://localhost:11434';
-    const model = document.getElementById('ollamaModel').value.trim() || 'llama3.2';
+    const apiKey = document.getElementById('groqApiKey').value.trim();
+    const model = document.getElementById('groqModel').value.trim() || 'llama-3.3-70b-versatile';
 
-    aiStatusEl.className = 'ai-status show';
-    aiStatusEl.innerHTML = '<span class="ai-spinner"></span> Consultando a Ollama ('+model+')...';
-
-    try{
-      const prompt = buildOllamaPrompt(cardNames, orientationState, zodiac, consultanteLine);
-      const aiText = await askOllama(host, model, prompt);
-      synthesisTextEl.textContent = aiText;
-      aiStatusEl.className = 'ai-status show';
-      aiStatusEl.innerHTML = '✧ Interpretación generada con Ollama ('+model+')';
-    } catch(err){
+    if(!apiKey){
       aiStatusEl.className = 'ai-status show error';
-      aiStatusEl.innerHTML = '⚠ No se pudo conectar con Ollama. Se muestra la interpretación local. ('+err.message+')';
+      aiStatusEl.innerHTML = '⚠ Falta tu clave API de Groq. Consíguela gratis en console.groq.com/keys y pégala arriba. Se muestra la interpretación local.';
+    } else {
+      aiStatusEl.className = 'ai-status show';
+      aiStatusEl.innerHTML = '<span class="ai-spinner"></span> Consultando a Groq ('+model+')...';
+
+      try{
+        const prompt = buildAiPrompt(cardNames, orientationState, zodiac, consultanteLine);
+        const aiText = await askGroq(apiKey, model, prompt);
+        synthesisTextEl.textContent = aiText;
+        aiStatusEl.className = 'ai-status show';
+        aiStatusEl.innerHTML = '✧ Interpretación generada con Groq ('+model+')';
+      } catch(err){
+        aiStatusEl.className = 'ai-status show error';
+        aiStatusEl.innerHTML = '⚠ No se pudo generar con Groq. Se muestra la interpretación local. ('+err.message+')';
+      }
     }
   }
 });
