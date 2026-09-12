@@ -380,7 +380,7 @@
       <label>Clave API de Groq (gratis)</label>
       <input type="password" id="groqApiKey" placeholder="gsk_...">
       <label>Modelo</label>
-      <input type="text" id="groqModel" placeholder="llama-3.3-70b-versatile" value="llama-3.3-70b-versatile">
+      <input type="text" id="groqModel" placeholder="openai/gpt-oss-120b" value="openai/gpt-oss-120b">
       <p class="ai-hint">
         Consigue tu clave gratuita en <strong>console.groq.com/keys</strong> (crea una cuenta gratis, clic en
         "Create API Key" y pégala aquí). No necesitas instalar nada ni tener tu computadora encendida:
@@ -816,7 +816,7 @@ document.getElementById('generarBtn').addEventListener('click', async ()=>{
   // Si la IA (Groq) está activada, intenta reemplazar la síntesis local por una generada
   if(aiEnabledBox.checked){
     const apiKey = document.getElementById('groqApiKey').value.trim();
-    const model = document.getElementById('groqModel').value.trim() || 'llama-3.3-70b-versatile';
+    const model = document.getElementById('groqModel').value.trim() || 'openai/gpt-oss-120b';
 
     if(!apiKey){
       aiStatusEl.className = 'ai-status show error';
