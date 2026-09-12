@@ -100,13 +100,63 @@
   .cards-row .card-slot{ margin-bottom:0; }
 
   .card-slot-extra{
-    max-width:calc((100% - 44px) / 3); margin:18px auto 0;
+    max-width:calc((100% - 44px) / 3); margin:16px auto 0;
+  }
+
+  .deck-actions{ display:flex; flex-direction:column; gap:10px; margin-top:2px; margin-bottom:8px; }
+  @media (min-width:560px){
+    .deck-actions{ flex-direction:row; }
+    .deck-actions .add-card-btn{ flex:1; margin:0; }
+    .deck-actions .shuffle-btn{ flex:1; }
+  }
+
+  .shuffle-btn{
+    position:relative; display:flex; align-items:center; justify-content:center; gap:12px;
+    width:100%; padding:11px 14px; border-radius:10px; cursor:pointer;
+    border:1px solid rgba(201,168,76,.45); background:rgba(201,168,76,.06);
+    color:var(--gold-bright); font-family:'Cinzel', serif; font-size:12px;
+    letter-spacing:.1em; text-transform:uppercase; transition:background .15s ease;
+  }
+  .shuffle-btn:hover{ background:rgba(201,168,76,.14); }
+  .shuffle-btn:disabled{ opacity:.7; cursor:default; }
+
+  .shuffle-deck{ position:relative; width:34px; height:36px; flex-shrink:0; }
+  .mini-card{
+    position:absolute; top:0; left:6px; width:22px; height:32px; border-radius:4px;
+    background:
+      repeating-linear-gradient(135deg, rgba(201,168,76,.08) 0 5px, transparent 5px 10px),
+      linear-gradient(160deg, rgba(70,36,120,.95), rgba(18,10,36,.98));
+    border:1.4px solid var(--gold); box-shadow:0 2px 6px rgba(0,0,0,.4);
+    transition:transform .3s ease;
+  }
+  .mini-card.c1{ transform:rotate(-10deg) translateX(-6px); z-index:1; }
+  .mini-card.c2{ transform:rotate(0deg); z-index:2; }
+  .mini-card.c3{ transform:rotate(10deg) translateX(6px); z-index:3; }
+
+  .shuffle-btn.is-shuffling .mini-card.c1{ animation:shuffle-left .8s ease-in-out infinite; }
+  .shuffle-btn.is-shuffling .mini-card.c2{ animation:shuffle-mid .8s ease-in-out infinite; animation-delay:.07s; }
+  .shuffle-btn.is-shuffling .mini-card.c3{ animation:shuffle-right .8s ease-in-out infinite; animation-delay:.14s; }
+
+  @keyframes shuffle-left{
+    0%,100%{ transform:rotate(-10deg) translateX(-6px) translateY(0); }
+    50%{ transform:rotate(-26deg) translateX(-13px) translateY(-5px); }
+  }
+  @keyframes shuffle-mid{
+    0%,100%{ transform:rotate(0deg) translateY(0); }
+    50%{ transform:rotate(8deg) translateY(-7px); }
+  }
+  @keyframes shuffle-right{
+    0%,100%{ transform:rotate(10deg) translateX(6px) translateY(0); }
+    50%{ transform:rotate(26deg) translateX(13px) translateY(-5px); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .shuffle-btn.is-shuffling .mini-card{ animation:none; }
   }
 
   @media (max-width: 780px){
     .cards-row{ grid-template-columns:1fr; gap:14px; }
     .cards-row .card-slot{ margin-bottom:14px; }
-    .card-slot-extra{ max-width:100%; margin-top:0; }
+    .card-slot-extra{ max-width:100%; margin-top:14px; }
     section.panel.panel-wide{ padding:22px 20px; }
   }
 
@@ -403,27 +453,19 @@
     </div>
     </div>
 
-    <div class="card-slot card-slot-extra" id="slot-wrap-3" style="display:none;">
-      <span class="tag">Carta de aclaración <span class="check">✓</span></span>
-      <button type="button" class="remove-slot" id="removeExtraCard">Quitar</button>
-      <div class="tarot-visual" id="visual-3">
-        <div class="tarot-visual-inner empty">
-          <span class="tarot-emoji">🂠</span>
-          <span class="tarot-name">Elige una carta</span>
-        </div>
-      </div>
-      <label>Carta</label>
-      <div class="autocomplete-wrap">
-        <input type="text" class="card-input" data-slot="3" placeholder="Escribe el nombre de la carta..." autocomplete="off">
-        <div class="suggestions" id="suggestions-3"></div>
-      </div>
-      <div class="orientation-toggle" data-slot="3">
-        <button type="button" data-o="upright" class="active">Al derecho</button>
-        <button type="button" data-o="reversed">Invertida</button>
-      </div>
-    </div>
+    <div id="extraCardsContainer"></div>
 
-    <button type="button" class="add-card-btn" id="addExtraCard">✦ Pedir una carta más (aclaración)</button>
+    <div class="deck-actions">
+      <button type="button" class="add-card-btn" id="addExtraCard">✦ Pedir una carta más (aclaración)</button>
+      <button type="button" class="shuffle-btn" id="shuffleBtn">
+        <span class="shuffle-deck" aria-hidden="true">
+          <span class="mini-card c1"></span>
+          <span class="mini-card c2"></span>
+          <span class="mini-card c3"></span>
+        </span>
+        <span class="shuffle-label">Barajar y tirar al azar</span>
+      </button>
+    </div>
 
     <button class="btn-primary" id="generarBtn">Revelar la lectura</button>
   </section>
@@ -628,9 +670,11 @@ function getZodiac(month, day){
 
 /* ============ ESTADO DE CARTAS SELECCIONADAS ============ */
 const ALL_CARD_NAMES = Object.keys(ALL_CARDS);
-const selectedCard = {0:null, 1:null, 2:null, 3:null};
-const orientationState = {0:"upright", 1:"upright", 2:"upright", 3:"upright"};
-let extraCardActive = false;
+const selectedCard = {0:null, 1:null, 2:null};
+const orientationState = {0:"upright", 1:"upright", 2:"upright"};
+let extraSlots = [];       // índices activos de cartas adicionales, en orden
+let nextExtraIndex = 3;    // siguiente índice a usar
+const MAX_EXTRA_CARDS = 4; // tope de cartas de aclaración adicionales
 
 function normalize(str){
   return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -638,6 +682,7 @@ function normalize(str){
 
 function renderVisual(slot){
   const inner = document.querySelector('#visual-'+slot+' .tarot-visual-inner');
+  if(!inner) return;
   const name = selectedCard[slot];
   const emojiEl = inner.querySelector('.tarot-emoji');
   const nameEl = inner.querySelector('.tarot-name');
@@ -656,8 +701,8 @@ function renderVisual(slot){
   if(wrap) wrap.classList.toggle('filled', !!name);
 }
 
-/* ============ AUTOCOMPLETADO DE CARTAS ============ */
-document.querySelectorAll('.card-input').forEach(input=>{
+/* ============ AUTOCOMPLETADO DE CARTAS (reutilizable para cartas dinámicas) ============ */
+function attachCardInputBehavior(input){
   const slot = input.getAttribute('data-slot');
   const box = document.getElementById('suggestions-'+slot);
 
@@ -697,10 +742,12 @@ document.querySelectorAll('.card-input').forEach(input=>{
     showSuggestions();
   });
   input.addEventListener('blur', ()=> setTimeout(()=> box.classList.remove('show'), 120));
-});
+}
 
-/* ============ TOGGLE DE ORIENTACIÓN (con animación de giro) ============ */
-document.querySelectorAll('.orientation-toggle').forEach(group=>{
+document.querySelectorAll('.card-input').forEach(attachCardInputBehavior);
+
+/* ============ TOGGLE DE ORIENTACIÓN (reutilizable, con animación de giro) ============ */
+function attachOrientationToggle(group){
   const slot = group.getAttribute('data-slot');
   group.querySelectorAll('button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
@@ -710,30 +757,140 @@ document.querySelectorAll('.orientation-toggle').forEach(group=>{
       renderVisual(slot);
     });
   });
-});
+}
 
-/* ============ CARTA ADICIONAL DE ACLARACIÓN (opcional) ============ */
+document.querySelectorAll('.orientation-toggle').forEach(attachOrientationToggle);
+
+/* ============ CARTAS DE ACLARACIÓN ADICIONALES (dinámicas, se apilan hacia abajo) ============ */
 const addExtraBtn = document.getElementById('addExtraCard');
-const removeExtraBtn = document.getElementById('removeExtraCard');
-const extraSlotWrap = document.getElementById('slot-wrap-3');
+const extraCardsContainer = document.getElementById('extraCardsContainer');
 
-addExtraBtn.addEventListener('click', ()=>{
-  extraCardActive = true;
-  extraSlotWrap.style.display = 'block';
-  addExtraBtn.style.display = 'none';
-  extraSlotWrap.scrollIntoView({behavior:'smooth', block:'center'});
-});
+function extraLabelFor(position){
+  return position === 1 ? 'Carta de aclaración' : 'Carta de aclaración ' + position;
+}
 
-removeExtraBtn.addEventListener('click', ()=>{
-  extraCardActive = false;
-  selectedCard[3] = null;
-  orientationState[3] = 'upright';
-  document.querySelector('.card-input[data-slot="3"]').value = '';
-  document.querySelector('.orientation-toggle[data-slot="3"] button[data-o="upright"]').click();
-  renderVisual(3);
-  extraSlotWrap.style.display = 'none';
-  addExtraBtn.style.display = 'block';
-});
+function renumberExtraLabels(){
+  extraSlots.forEach((slot, i)=>{
+    const tagEl = document.querySelector('#slot-wrap-'+slot+' .tag');
+    if(tagEl){
+      tagEl.childNodes[0].textContent = extraLabelFor(i+1) + ' ';
+    }
+  });
+}
+
+function createExtraCardSlot(slot, position){
+  const wrap = document.createElement('div');
+  wrap.className = 'card-slot card-slot-extra';
+  wrap.id = 'slot-wrap-'+slot;
+  wrap.innerHTML = `
+    <span class="tag">${extraLabelFor(position)} <span class="check">✓</span></span>
+    <button type="button" class="remove-slot">Quitar</button>
+    <div class="tarot-visual" id="visual-${slot}">
+      <div class="tarot-visual-inner empty">
+        <span class="tarot-emoji">🂠</span>
+        <span class="tarot-name">Elige una carta</span>
+      </div>
+    </div>
+    <label>Carta</label>
+    <div class="autocomplete-wrap">
+      <input type="text" class="card-input" data-slot="${slot}" placeholder="Escribe el nombre de la carta..." autocomplete="off">
+      <div class="suggestions" id="suggestions-${slot}"></div>
+    </div>
+    <div class="orientation-toggle" data-slot="${slot}">
+      <button type="button" data-o="upright" class="active">Al derecho</button>
+      <button type="button" data-o="reversed">Invertida</button>
+    </div>
+  `;
+  return wrap;
+}
+
+function addExtraCardSlot(){
+  if(extraSlots.length >= MAX_EXTRA_CARDS){
+    alert('Ya tienes el máximo de cartas de aclaración para esta tirada.');
+    return;
+  }
+  const slot = nextExtraIndex++;
+  selectedCard[slot] = null;
+  orientationState[slot] = 'upright';
+  extraSlots.push(slot);
+
+  const el = createExtraCardSlot(slot, extraSlots.length);
+  extraCardsContainer.appendChild(el);
+
+  attachCardInputBehavior(el.querySelector('.card-input'));
+  attachOrientationToggle(el.querySelector('.orientation-toggle'));
+  el.querySelector('.remove-slot').addEventListener('click', ()=> removeExtraCardSlot(slot));
+
+  if(extraSlots.length >= MAX_EXTRA_CARDS){
+    addExtraBtn.disabled = true;
+    addExtraBtn.textContent = 'Máximo de cartas de aclaración alcanzado';
+  }
+
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function removeExtraCardSlot(slot){
+  delete selectedCard[slot];
+  delete orientationState[slot];
+  extraSlots = extraSlots.filter(s => s !== slot);
+  const el = document.getElementById('slot-wrap-'+slot);
+  if(el) el.remove();
+  renumberExtraLabels();
+  addExtraBtn.disabled = false;
+  addExtraBtn.textContent = '✦ Pedir una carta más (aclaración)';
+}
+
+addExtraBtn.addEventListener('click', addExtraCardSlot);
+
+/* ============ BARAJAR Y TIRAR AUTOMÁTICAMENTE ============ */
+const shuffleBtn = document.getElementById('shuffleBtn');
+
+function drawRandomReading(){
+  const pool = ALL_CARD_NAMES.slice();
+  const picks = [];
+  for(let i=0;i<3;i++){
+    const idx = Math.floor(Math.random() * pool.length);
+    picks.push(pool.splice(idx, 1)[0]);
+  }
+  [0,1,2].forEach((slot, i)=>{
+    const name = picks[i];
+    const orientation = Math.random() < 0.25 ? 'reversed' : 'upright';
+    selectedCard[slot] = name;
+    orientationState[slot] = orientation;
+
+    const input = document.querySelector('.card-input[data-slot="'+slot+'"]');
+    if(input) input.value = name;
+
+    const group = document.querySelector('.orientation-toggle[data-slot="'+slot+'"]');
+    if(group){
+      group.querySelectorAll('button').forEach(b=>{
+        b.classList.toggle('active', b.getAttribute('data-o') === orientation);
+      });
+    }
+    renderVisual(slot);
+  });
+  const firstSlot = document.getElementById('slot-wrap-0');
+  if(firstSlot) firstSlot.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+if(shuffleBtn){
+  const shuffleLabel = shuffleBtn.querySelector('.shuffle-label');
+  const originalShuffleLabel = shuffleLabel ? shuffleLabel.textContent : '';
+
+  shuffleBtn.addEventListener('click', ()=>{
+    if(shuffleBtn.classList.contains('is-shuffling')) return;
+    shuffleBtn.classList.add('is-shuffling');
+    shuffleBtn.disabled = true;
+    if(shuffleLabel) shuffleLabel.textContent = 'Barajando...';
+
+    setTimeout(()=>{
+      drawRandomReading();
+      shuffleBtn.classList.remove('is-shuffling');
+      shuffleBtn.disabled = false;
+      if(shuffleLabel) shuffleLabel.textContent = originalShuffleLabel;
+    }, 1100);
+  });
+}
 
 /* ============ ZODIACO EN VIVO ============ */
 function updateZodiacDisplay(){
@@ -758,8 +915,7 @@ document.getElementById('birthDay').addEventListener('input', updateZodiacDispla
 const POSITIONS = [
   {roman:"NO", label:"Razones para decir que no", frame:"Esta carta señala por qué convendría decir que NO, ya que representa"},
   {roman:"•", label:"La situación", frame:"El corazón del asunto está representado por"},
-  {roman:"SÍ", label:"Razones para decir que sí", frame:"Esta carta señala por qué convendría decir que SÍ, ya que representa"},
-  {roman:"✦", label:"Carta de aclaración", frame:"Como aclaración adicional a la tirada, aparece"}
+  {roman:"SÍ", label:"Razones para decir que sí", frame:"Esta carta señala por qué convendría decir que SÍ, ya que representa"}
 ];
 
 /* ============ TOGGLE DEL PANEL DE GROQ ============ */
@@ -809,16 +965,19 @@ const TAROT_SYSTEM_PROMPT =
   "Nunca das consejos médicos, legales o financieros definitivos; hablas en términos de energías, tendencias y posibilidades, " +
   "dejando claro que la decisión final es siempre del consultante. Respondes siempre en español, en prosa fluida, sin listas ni encabezados.";
 
-function buildAiPrompt(cardNames, orientationState, zodiac, question, extraCardName){
+function buildAiPrompt(cardNames, orientationState, zodiac, question, extraCards){
   const roleLabel = ['IZQUIERDA (razones para decir que NO)', 'CENTRAL (la situación de fondo)', 'DERECHA (razones para decir que SÍ)'];
   let p = `Te doy una tirada de tarot Rider-Waite con un significado fijo de posición:\n\n`;
   cardNames.forEach((name, i)=>{
     const rev = orientationState[i]==='reversed' ? ' (invertida)' : ' (al derecho)';
     p += `- Carta ${roleLabel[i]}: ${name}${rev}\n`;
   });
-  if(extraCardName){
-    const rev = orientationState[3]==='reversed' ? ' (invertida)' : ' (al derecho)';
-    p += `- Carta ADICIONAL DE ACLARACIÓN (pedida aparte para profundizar en la tirada): ${extraCardName}${rev}\n`;
+  if(extraCards && extraCards.length){
+    extraCards.forEach((c, i)=>{
+      const rev = c.orientation==='reversed' ? ' (invertida)' : ' (al derecho)';
+      const tag = extraCards.length > 1 ? `ADICIONAL DE ACLARACIÓN ${i+1}` : `ADICIONAL DE ACLARACIÓN`;
+      p += `- Carta ${tag} (pedida aparte para profundizar en la tirada): ${c.name}${rev}\n`;
+    });
   }
   p += `\n`;
 
@@ -835,12 +994,12 @@ function buildAiPrompt(cardNames, orientationState, zodiac, question, extraCardN
     p += `"cómo va a evolucionar...", "qué me conviene hacer con...").\n\n`;
     p += `- Si es una pregunta CERRADA: comienza tu respuesta con una palabra clara — "Sí", "No", o si las cartas están genuinamente divididas, `;
     p += `"Depende" o "Todavía no" — y después, en un solo párrafo de máximo 130 palabras, explica brevemente por qué, conectando las cartas `;
-    p += `(incluida la de aclaración si la hay) y considerando si cada una está al derecho o invertida.\n`;
+    p += `(incluidas las de aclaración si las hay) y considerando si cada una está al derecho o invertida.\n`;
     p += `- Si es una pregunta ABIERTA: no fuerces un sí o no; responde directamente a lo que se pregunta con una interpretación completa `;
     p += `y humanizada de máximo 200 palabras, en un solo párrafo, conectando todas las cartas entre sí y cerrando con una orientación práctica.\n`;
   } else {
     p += `El consultante no dejó una pregunta específica, así que ofrece una interpretación general completa de la tirada, `;
-    p += `en un solo párrafo de máximo 200 palabras, que conecte todas las cartas (incluida la de aclaración si la hay) como una historia coherente, `;
+    p += `en un solo párrafo de máximo 200 palabras, que conecte todas las cartas (incluidas las de aclaración si las hay) como una historia coherente, `;
     p += `explique qué tan fuerte es la razón para decir NO frente a la razón para decir SÍ (según estén al derecho o invertidas), `;
     p += `y cierre con una inclinación clara: hacia el NO, hacia el SÍ, o hacia la prudencia de esperar.\n`;
   }
@@ -855,12 +1014,17 @@ document.getElementById('generarBtn').addEventListener('click', async ()=>{
     alert("Escribe y selecciona las tres cartas de la tirada antes de continuar.");
     return;
   }
-  if(extraCardActive && !selectedCard[3]){
-    alert("Activaste la carta de aclaración: selecciónala o pulsa 'Quitar' para continuar sin ella.");
+  const emptyExtra = extraSlots.find(slot => !selectedCard[slot]);
+  if(emptyExtra !== undefined){
+    alert("Tienes una carta de aclaración sin elegir: selecciónala o pulsa 'Quitar' para continuar sin ella.");
     return;
   }
 
-  const extraCardName = (extraCardActive && selectedCard[3]) ? selectedCard[3] : null;
+  const extraCards = extraSlots.map(slot => ({
+    slot,
+    name: selectedCard[slot],
+    orientation: orientationState[slot]
+  }));
   const question = document.getElementById('consultQuestion').value.trim();
 
   const year = document.getElementById('birthYear').value;
@@ -900,22 +1064,21 @@ document.getElementById('generarBtn').addEventListener('click', async ()=>{
     positionsDiv.appendChild(block);
   });
 
-  if(extraCardName){
-    const orientation = orientationState[3];
-    const data = ALL_CARDS[extraCardName];
-    const meaning = orientation === 'upright' ? data.upright : data.reversed;
-    const pos = POSITIONS[3];
+  extraCards.forEach((c, i)=>{
+    const data = ALL_CARDS[c.name];
+    const meaning = c.orientation === 'upright' ? data.upright : data.reversed;
+    const label = extraCards.length > 1 ? extraLabelFor(i+1) : 'Carta de aclaración';
     const block = document.createElement('div');
     block.className = 'position-block';
     block.innerHTML = `
-      <div class="roman">${pos.roman} · ${pos.label}</div>
-      <h3>${getEmoji(extraCardName)} ${extraCardName}</h3>
-      <span class="orient-label ${orientation==='reversed'?'rev':''}">${orientation==='reversed'?'Invertida':'Al derecho'}</span>
+      <div class="roman">✦ · ${label}</div>
+      <h3>${getEmoji(c.name)} ${c.name}</h3>
+      <span class="orient-label ${c.orientation==='reversed'?'rev':''}">${c.orientation==='reversed'?'Invertida':'Al derecho'}</span>
       ${data.imagen ? `<p style="font-style:italic; color:var(--lavender); font-size:15px;">La carta muestra ${data.imagen}</p>` : ""}
-      <p>${pos.frame} <strong>${extraCardName}</strong>${orientation==='reversed'?' (invertida)':''}: ${meaning}</p>
+      <p>Como aclaración adicional a la tirada, aparece <strong>${c.name}</strong>${c.orientation==='reversed'?' (invertida)':''}: ${meaning}</p>
     `;
     positionsDiv.appendChild(block);
-  }
+  });
 
   // Síntesis final (local, basada en reglas): coherencia entre NO (izquierda) · Situación (centro) · SÍ (derecha)
   const noReversed = orientationState[0] === 'reversed';
@@ -951,11 +1114,14 @@ document.getElementById('generarBtn').addEventListener('click', async ()=>{
       " termine de revelarse antes de inclinar la balanza.";
   }
 
-  if(extraCardName){
-    const extraOrientation = orientationState[3];
-    const extraReversedTxt = extraOrientation === 'reversed' ? " invertida" : "";
-    synth += " Como aclaración adicional, la carta " + extraCardName + extraReversedTxt +
-      " añade un matiz importante a tener en cuenta antes de cerrar esta lectura.";
+  if(extraCards.length){
+    const extraDescriptions = extraCards.map(c => c.name + (c.orientation === 'reversed' ? " invertida" : ""));
+    const joined = extraDescriptions.length === 1
+      ? extraDescriptions[0]
+      : extraDescriptions.slice(0,-1).join(", ") + " y " + extraDescriptions[extraDescriptions.length-1];
+    synth += extraDescriptions.length === 1
+      ? " Como aclaración adicional, la carta " + joined + " añade un matiz importante a tener en cuenta antes de cerrar esta lectura."
+      : " Como aclaración adicional, las cartas " + joined + " añaden matices importantes a tener en cuenta antes de cerrar esta lectura.";
   }
 
   if(zodiac){
@@ -987,7 +1153,7 @@ document.getElementById('generarBtn').addEventListener('click', async ()=>{
       aiStatusEl.innerHTML = '<span class="ai-spinner"></span> Consultando a Groq ('+model+')...';
 
       try{
-        const prompt = buildAiPrompt(cardNames, orientationState, zodiac, question, extraCardName);
+        const prompt = buildAiPrompt(cardNames, orientationState, zodiac, question, extraCards);
         const aiText = await askGroq(apiKey, model, prompt);
         synthesisTextEl.textContent = aiText;
         aiStatusEl.className = 'ai-status show';
