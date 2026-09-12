@@ -94,14 +94,37 @@
 
   .card-slot{
     border:1px dashed rgba(201,168,76,.3); border-radius:14px; padding:14px; margin-bottom:14px;
-    position:relative;
+    position:relative; transition:border-color .25s ease, background .25s ease;
+  }
+  .card-slot.filled{
+    border-style:solid; border-color:rgba(201,168,76,.6);
+    background:linear-gradient(160deg, rgba(201,168,76,.06), transparent 60%);
   }
   .card-slot .tag{
     position:absolute; top:-11px; left:14px; background:var(--void-2); padding:0 8px;
     font-family:'Cinzel', serif; font-size:11px; letter-spacing:.15em; color:var(--gold);
-    text-transform:uppercase;
+    text-transform:uppercase; display:flex; align-items:center; gap:6px;
   }
+  .card-slot .tag .check{
+    display:none; color:#8fd19e; font-size:12px;
+  }
+  .card-slot.filled .tag .check{ display:inline; }
+  .card-slot .remove-slot{
+    position:absolute; top:-11px; right:14px; background:var(--void-2); border:1px solid rgba(201,168,76,.35);
+    color:var(--lavender); font-family:'Cinzel', serif; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    padding:2px 9px; border-radius:20px; cursor:pointer;
+  }
+  .remove-slot:hover{ color:var(--gold-bright); border-color:var(--gold); }
   .card-info{display:none;}
+
+  .add-card-btn{
+    width:100%; padding:12px; margin-top:2px; margin-bottom:8px; border-radius:10px; cursor:pointer;
+    background:transparent; border:1px dashed rgba(201,168,76,.45); color:var(--gold-bright);
+    font-family:'Cinzel', serif; font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    transition:.15s;
+  }
+  .add-card-btn:hover{ background:rgba(201,168,76,.08); }
+  .add-card-btn:disabled{ opacity:.35; cursor:default; }
 
   .tarot-visual{
     width:130px; height:195px; margin:0 auto 16px;
@@ -296,14 +319,19 @@
       </div>
     </div>
     <div id="zodiacResult"></div>
+
+    <label>Pregunta de la consulta (opcional)</label>
+    <textarea id="consultQuestion" rows="2" placeholder="Ej: ¿Debería aceptar el trabajo? · O déjalo vacío para una lectura general"
+      style="width:100%; padding:12px 14px; border-radius:10px; background:rgba(10,5,22,.6); border:1px solid rgba(201,168,76,.35); color:var(--ink); font-family:'Cormorant Garamond', serif; font-size:16px; resize:vertical; min-height:56px;"></textarea>
+    <p style="margin:8px 0 0; font-size:13px; color:var(--lavender); font-style:italic;">Si haces una pregunta cerrada (responde sí o no), la IA la contestará directo. Si la dejas vacía o es abierta, recibirás la interpretación completa.</p>
   </section>
 
   <!-- CARTAS -->
   <section class="panel">
     <h2>La tirada</h2>
 
-    <div class="card-slot">
-      <span class="tag">Izquierda · Decir que NO</span>
+    <div class="card-slot" id="slot-wrap-0">
+      <span class="tag">Izquierda · Decir que NO <span class="check">✓</span></span>
       <div class="tarot-visual" id="visual-0">
         <div class="tarot-visual-inner empty">
           <span class="tarot-emoji">🂠</span>
@@ -321,8 +349,8 @@
       </div>
     </div>
 
-    <div class="card-slot">
-      <span class="tag">Centro · La situación</span>
+    <div class="card-slot" id="slot-wrap-1">
+      <span class="tag">Centro · La situación <span class="check">✓</span></span>
       <div class="tarot-visual" id="visual-1">
         <div class="tarot-visual-inner empty">
           <span class="tarot-emoji">🂠</span>
@@ -340,8 +368,8 @@
       </div>
     </div>
 
-    <div class="card-slot">
-      <span class="tag">Derecha · Decir que SÍ</span>
+    <div class="card-slot" id="slot-wrap-2">
+      <span class="tag">Derecha · Decir que SÍ <span class="check">✓</span></span>
       <div class="tarot-visual" id="visual-2">
         <div class="tarot-visual-inner empty">
           <span class="tarot-emoji">🂠</span>
@@ -358,6 +386,28 @@
         <button type="button" data-o="reversed">Invertida</button>
       </div>
     </div>
+
+    <div class="card-slot" id="slot-wrap-3" style="display:none;">
+      <span class="tag">Carta de aclaración <span class="check">✓</span></span>
+      <button type="button" class="remove-slot" id="removeExtraCard">Quitar</button>
+      <div class="tarot-visual" id="visual-3">
+        <div class="tarot-visual-inner empty">
+          <span class="tarot-emoji">🂠</span>
+          <span class="tarot-name">Elige una carta</span>
+        </div>
+      </div>
+      <label>Carta</label>
+      <div class="autocomplete-wrap">
+        <input type="text" class="card-input" data-slot="3" placeholder="Escribe el nombre de la carta..." autocomplete="off">
+        <div class="suggestions" id="suggestions-3"></div>
+      </div>
+      <div class="orientation-toggle" data-slot="3">
+        <button type="button" data-o="upright" class="active">Al derecho</button>
+        <button type="button" data-o="reversed">Invertida</button>
+      </div>
+    </div>
+
+    <button type="button" class="add-card-btn" id="addExtraCard">✦ Pedir una carta más (aclaración)</button>
 
     <button class="btn-primary" id="generarBtn">Revelar la lectura</button>
   </section>
@@ -562,8 +612,9 @@ function getZodiac(month, day){
 
 /* ============ ESTADO DE CARTAS SELECCIONADAS ============ */
 const ALL_CARD_NAMES = Object.keys(ALL_CARDS);
-const selectedCard = {0:null, 1:null, 2:null};
-const orientationState = {0:"upright", 1:"upright", 2:"upright"};
+const selectedCard = {0:null, 1:null, 2:null, 3:null};
+const orientationState = {0:"upright", 1:"upright", 2:"upright", 3:"upright"};
+let extraCardActive = false;
 
 function normalize(str){
   return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -584,6 +635,9 @@ function renderVisual(slot){
     nameEl.textContent = 'Elige una carta';
   }
   inner.classList.toggle('reversed', orientationState[slot] === 'reversed');
+
+  const wrap = document.getElementById('slot-wrap-'+slot);
+  if(wrap) wrap.classList.toggle('filled', !!name);
 }
 
 /* ============ AUTOCOMPLETADO DE CARTAS ============ */
@@ -595,9 +649,9 @@ document.querySelectorAll('.card-input').forEach(input=>{
     const q = normalize(input.value.trim());
     let matches;
     if(!q){
-      matches = ALL_CARD_NAMES.slice(0, 8);
+      matches = ALL_CARD_NAMES;
     } else {
-      matches = ALL_CARD_NAMES.filter(n => normalize(n).includes(q)).slice(0, 8);
+      matches = ALL_CARD_NAMES.filter(n => normalize(n).includes(q));
     }
     box.innerHTML = '';
     if(matches.length === 0){
@@ -642,6 +696,29 @@ document.querySelectorAll('.orientation-toggle').forEach(group=>{
   });
 });
 
+/* ============ CARTA ADICIONAL DE ACLARACIÓN (opcional) ============ */
+const addExtraBtn = document.getElementById('addExtraCard');
+const removeExtraBtn = document.getElementById('removeExtraCard');
+const extraSlotWrap = document.getElementById('slot-wrap-3');
+
+addExtraBtn.addEventListener('click', ()=>{
+  extraCardActive = true;
+  extraSlotWrap.style.display = 'block';
+  addExtraBtn.style.display = 'none';
+  extraSlotWrap.scrollIntoView({behavior:'smooth', block:'center'});
+});
+
+removeExtraBtn.addEventListener('click', ()=>{
+  extraCardActive = false;
+  selectedCard[3] = null;
+  orientationState[3] = 'upright';
+  document.querySelector('.card-input[data-slot="3"]').value = '';
+  document.querySelector('.orientation-toggle[data-slot="3"] button[data-o="upright"]').click();
+  renderVisual(3);
+  extraSlotWrap.style.display = 'none';
+  addExtraBtn.style.display = 'block';
+});
+
 /* ============ ZODIACO EN VIVO ============ */
 function updateZodiacDisplay(){
   const m = parseInt(document.getElementById('birthMonth').value);
@@ -665,7 +742,8 @@ document.getElementById('birthDay').addEventListener('input', updateZodiacDispla
 const POSITIONS = [
   {roman:"NO", label:"Razones para decir que no", frame:"Esta carta señala por qué convendría decir que NO, ya que representa"},
   {roman:"•", label:"La situación", frame:"El corazón del asunto está representado por"},
-  {roman:"SÍ", label:"Razones para decir que sí", frame:"Esta carta señala por qué convendría decir que SÍ, ya que representa"}
+  {roman:"SÍ", label:"Razones para decir que sí", frame:"Esta carta señala por qué convendría decir que SÍ, ya que representa"},
+  {roman:"✦", label:"Carta de aclaración", frame:"Como aclaración adicional a la tirada, aparece"}
 ];
 
 /* ============ TOGGLE DEL PANEL DE GROQ ============ */
@@ -686,11 +764,11 @@ async function askGroq(apiKey, model, prompt){
     body: JSON.stringify({
       model,
       messages: [
-        { role: 'system', content: 'Eres un tarotista profesional, cálido y directo, experto en la baraja Rider-Waite.' },
+        { role: 'system', content: TAROT_SYSTEM_PROMPT },
         { role: 'user', content: prompt }
       ],
       temperature: 0.8,
-      max_tokens: 400
+      max_tokens: 500
     })
   });
   if(!res.ok){
@@ -704,21 +782,53 @@ async function askGroq(apiKey, model, prompt){
   return text.trim();
 }
 
-function buildAiPrompt(cardNames, orientationState, zodiac, consultanteLine){
-  const noRev = orientationState[0]==='reversed' ? ' (invertida)' : ' (al derecho)';
-  const sitRev = orientationState[1]==='reversed' ? ' (invertida)' : ' (al derecho)';
-  const yesRev = orientationState[2]==='reversed' ? ' (invertida)' : ' (al derecho)';
-  let p = `Te doy una tirada de tres cartas del tarot Rider-Waite con un significado fijo de posición:\n\n`;
-  p += `- Carta IZQUIERDA (razones para decir que NO): ${cardNames[0]}${noRev}\n`;
-  p += `- Carta CENTRAL (la situación de fondo): ${cardNames[1]}${sitRev}\n`;
-  p += `- Carta DERECHA (razones para decir que SÍ): ${cardNames[2]}${yesRev}\n\n`;
-  if(zodiac){
-    p += `El consultante nació bajo el signo de ${zodiac.name}, elemento ${zodiac.element}, asociado a ${zodiac.desc}.\n\n`;
+/* ============ PROMPT DEL SISTEMA: TAROTISTA HUMANIZADO ============ */
+const TAROT_SYSTEM_PROMPT =
+  "Eres un tarotista profesional con muchos años de experiencia leyendo la baraja Rider-Waite. " +
+  "Hablas como una persona real y cercana, no como un manual esotérico: usas un tono cálido, empático y directo, " +
+  "con lenguaje claro y cotidiano, evitando jerga esotérica excesiva, frases genéricas de horóscopo o afirmaciones vacías. " +
+  "Conectas siempre las cartas entre sí como una historia coherente, no como significados sueltos. " +
+  "Eres honesto incluso cuando el mensaje de las cartas no es el que el consultante quisiera escuchar, pero lo comunicas " +
+  "con delicadeza y sin alarmismo, ofreciendo siempre una perspectiva constructiva. " +
+  "Nunca das consejos médicos, legales o financieros definitivos; hablas en términos de energías, tendencias y posibilidades, " +
+  "dejando claro que la decisión final es siempre del consultante. Respondes siempre en español, en prosa fluida, sin listas ni encabezados.";
+
+function buildAiPrompt(cardNames, orientationState, zodiac, question, extraCardName){
+  const roleLabel = ['IZQUIERDA (razones para decir que NO)', 'CENTRAL (la situación de fondo)', 'DERECHA (razones para decir que SÍ)'];
+  let p = `Te doy una tirada de tarot Rider-Waite con un significado fijo de posición:\n\n`;
+  cardNames.forEach((name, i)=>{
+    const rev = orientationState[i]==='reversed' ? ' (invertida)' : ' (al derecho)';
+    p += `- Carta ${roleLabel[i]}: ${name}${rev}\n`;
+  });
+  if(extraCardName){
+    const rev = orientationState[3]==='reversed' ? ' (invertida)' : ' (al derecho)';
+    p += `- Carta ADICIONAL DE ACLARACIÓN (pedida aparte para profundizar en la tirada): ${extraCardName}${rev}\n`;
   }
-  p += `Escribe en español, en un solo párrafo de máximo 160 palabras, una interpretación coherente y cálida como tarotista profesional, `;
-  p += `que conecte las tres cartas entre sí, explique qué tan fuerte es la razón para decir NO frente a la razón para decir SÍ `;
-  p += `(teniendo en cuenta si cada carta está al derecho o invertida), y cierre con una inclinación clara: hacia el NO, hacia el SÍ, `;
-  p += `o hacia la prudencia de esperar. No uses listas ni encabezados, solo prosa fluida.`;
+  p += `\n`;
+
+  if(zodiac){
+    p += `El consultante nació bajo el signo de ${zodiac.name}, elemento ${zodiac.element}, asociado a ${zodiac.desc}. `;
+    p += `Puedes usar este dato como matiz del temperamento del consultante, sin que domine la lectura.\n\n`;
+  }
+
+  const q = (question || '').trim();
+  if(q){
+    p += `La pregunta concreta del consultante es: "${q}"\n\n`;
+    p += `Primero decide si esa pregunta es una pregunta cerrada que se puede responder con SÍ o NO (por ejemplo "¿debería...", `;
+    p += `"¿conviene...", "¿es buena idea...", "¿va a...", "¿volverá...") o si es una pregunta abierta (por ejemplo "qué debo saber sobre...", `;
+    p += `"cómo va a evolucionar...", "qué me conviene hacer con...").\n\n`;
+    p += `- Si es una pregunta CERRADA: comienza tu respuesta con una palabra clara — "Sí", "No", o si las cartas están genuinamente divididas, `;
+    p += `"Depende" o "Todavía no" — y después, en un solo párrafo de máximo 130 palabras, explica brevemente por qué, conectando las cartas `;
+    p += `(incluida la de aclaración si la hay) y considerando si cada una está al derecho o invertida.\n`;
+    p += `- Si es una pregunta ABIERTA: no fuerces un sí o no; responde directamente a lo que se pregunta con una interpretación completa `;
+    p += `y humanizada de máximo 200 palabras, en un solo párrafo, conectando todas las cartas entre sí y cerrando con una orientación práctica.\n`;
+  } else {
+    p += `El consultante no dejó una pregunta específica, así que ofrece una interpretación general completa de la tirada, `;
+    p += `en un solo párrafo de máximo 200 palabras, que conecte todas las cartas (incluida la de aclaración si la hay) como una historia coherente, `;
+    p += `explique qué tan fuerte es la razón para decir NO frente a la razón para decir SÍ (según estén al derecho o invertidas), `;
+    p += `y cierre con una inclinación clara: hacia el NO, hacia el SÍ, o hacia la prudencia de esperar.\n`;
+  }
+  p += `\nNo uses listas ni encabezados, solo prosa fluida y humana.`;
   return p;
 }
 
@@ -729,6 +839,13 @@ document.getElementById('generarBtn').addEventListener('click', async ()=>{
     alert("Escribe y selecciona las tres cartas de la tirada antes de continuar.");
     return;
   }
+  if(extraCardActive && !selectedCard[3]){
+    alert("Activaste la carta de aclaración: selecciónala o pulsa 'Quitar' para continuar sin ella.");
+    return;
+  }
+
+  const extraCardName = (extraCardActive && selectedCard[3]) ? selectedCard[3] : null;
+  const question = document.getElementById('consultQuestion').value.trim();
 
   const year = document.getElementById('birthYear').value;
   const month = parseInt(document.getElementById('birthMonth').value);
@@ -767,12 +884,33 @@ document.getElementById('generarBtn').addEventListener('click', async ()=>{
     positionsDiv.appendChild(block);
   });
 
+  if(extraCardName){
+    const orientation = orientationState[3];
+    const data = ALL_CARDS[extraCardName];
+    const meaning = orientation === 'upright' ? data.upright : data.reversed;
+    const pos = POSITIONS[3];
+    const block = document.createElement('div');
+    block.className = 'position-block';
+    block.innerHTML = `
+      <div class="roman">${pos.roman} · ${pos.label}</div>
+      <h3>${getEmoji(extraCardName)} ${extraCardName}</h3>
+      <span class="orient-label ${orientation==='reversed'?'rev':''}">${orientation==='reversed'?'Invertida':'Al derecho'}</span>
+      ${data.imagen ? `<p style="font-style:italic; color:var(--lavender); font-size:15px;">La carta muestra ${data.imagen}</p>` : ""}
+      <p>${pos.frame} <strong>${extraCardName}</strong>${orientation==='reversed'?' (invertida)':''}: ${meaning}</p>
+    `;
+    positionsDiv.appendChild(block);
+  }
+
   // Síntesis final (local, basada en reglas): coherencia entre NO (izquierda) · Situación (centro) · SÍ (derecha)
   const noReversed = orientationState[0] === 'reversed';
   const situationReversed = orientationState[1] === 'reversed';
   const yesReversed = orientationState[2] === 'reversed';
 
-  let synth = "La carta central, " + cardNames[1] + (situationReversed ? " (invertida)" : "") +
+  let synth = "";
+  if(question){
+    synth += "Sobre tu pregunta —\"" + question + "\"—: ";
+  }
+  synth += "La carta central, " + cardNames[1] + (situationReversed ? " (invertida)" : "") +
     ", describe el corazón del asunto que se está consultando. A un lado, " + cardNames[0] +
     (noReversed ? " invertida" : "") + " concentra las razones para decir NO, y al otro, " + cardNames[2] +
     (yesReversed ? " invertida" : "") + " concentra las razones para decir SÍ. ";
@@ -795,6 +933,13 @@ document.getElementById('generarBtn').addEventListener('click', async ()=>{
   } else {
     synth += "Tanto el NO como el SÍ aparecen invertidos, lo que sugiere que ninguna de las dos fuerzas se manifiesta todavía con claridad: es un momento para observar más que para decidir de forma apresurada, dejando que " + cardNames[1] +
       " termine de revelarse antes de inclinar la balanza.";
+  }
+
+  if(extraCardName){
+    const extraOrientation = orientationState[3];
+    const extraReversedTxt = extraOrientation === 'reversed' ? " invertida" : "";
+    synth += " Como aclaración adicional, la carta " + extraCardName + extraReversedTxt +
+      " añade un matiz importante a tener en cuenta antes de cerrar esta lectura.";
   }
 
   if(zodiac){
@@ -826,7 +971,7 @@ document.getElementById('generarBtn').addEventListener('click', async ()=>{
       aiStatusEl.innerHTML = '<span class="ai-spinner"></span> Consultando a Groq ('+model+')...';
 
       try{
-        const prompt = buildAiPrompt(cardNames, orientationState, zodiac, consultanteLine);
+        const prompt = buildAiPrompt(cardNames, orientationState, zodiac, question, extraCardName);
         const aiText = await askGroq(apiKey, model, prompt);
         synthesisTextEl.textContent = aiText;
         aiStatusEl.className = 'ai-status show';
